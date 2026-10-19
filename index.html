@@ -111,8 +111,9 @@
   // Alamat web app Apps Script (hasil Deploy, berakhiran /exec)
   const API_URL = 'https://script.google.com/macros/s/AKfycbynnIbA-TiK1ebj2BDSSoZBFqe8Lz7kITnDY7448gGt5_dc3qjHattle33yVgvQxGE/exec';
   const NAMA_ACARA = 'Check-in Wali Santri';
-  // Alamat GitHub Pages Anda (untuk foto wisudawan di folder foto/ dan latar HP latar-hp.jpg)
-  const ALAMAT_FOTO = 'https://mubiku.github.io/checkin-acara/';
+  // Alamat folder situs ini (otomatis mengikuti alamat GitHub Pages Anda).
+  // Foto wisudawan dibaca dari foto/ dan latar HP dari latar-hp.jpg di folder yang sama.
+  const ALAMAT_FOTO = new URL('.', location.href).href;
   // Suara saat scan: true = hidup, false = mati
   const SUARA_HP = true;
   const SUARA_LAYAR = true;
