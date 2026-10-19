@@ -12,6 +12,10 @@
       body.berlatar { background-image: var(--foto); background-size: 100% auto; background-position: top center; background-attachment: scroll; }
       body.berlatar .wrap { padding-top: 58vw; }
     }
+    /* Latar foto potret khusus HP */
+    body.berlatar.latar-hp { background-image: linear-gradient(rgba(0,0,0,.4), rgba(0,0,0,.4)), var(--foto-hp);
+                             background-size: cover; background-position: center top; background-attachment: fixed; }
+    body.berlatar.latar-hp .wrap { padding-top: 12px; }
     .wrap { max-width: 520px; margin: 0 auto; padding: 12px; }
     h1 { font-size: 22px; text-align: center; margin: 12px 0 8px; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.6); }
     #stat { text-align: center; font-weight: bold; margin-bottom: 8px; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.6); }
@@ -29,6 +33,25 @@
     button { background: #1d4ed8; color: #fff; border: none; }
     #login { margin-top: 40px; text-align: center; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.6); }
     #login .baris { justify-content: center; }
+    /* Lencana kategori tamu */
+    .lencana { display: inline-block; padding: 4px 16px; border-radius: 999px; font-weight: bold; margin-bottom: 8px; }
+    .lencana.vip { background: #facc15; color: #1f2937; }
+    .lencana.umum { border: 2px solid currentColor; }
+    #layar .lencana { font-size: min(5vw, 8vh); padding: 1vh 4vw; margin-bottom: 3vh; }
+    .lencana.wisuda { background: #7c3aed; color: #fff; }
+    .lencana.wisudavip { background: #facc15; color: #4c1d95; border: 3px solid #7c3aed; }
+    /* Foto wisudawan */
+    .foto { display: block; margin: 0 auto 10px; border-radius: 12px; border: 4px solid rgba(255,255,255,.9);
+            object-fit: cover; background: rgba(0,0,0,.25); }
+    .kotak .foto { width: 110px; height: 140px; }
+    #layar .foto { height: 36vh; width: auto; aspect-ratio: 3 / 4; margin-bottom: 2vh; }
+    #layar.ada-foto .lencana { font-size: min(4vw, 6vh); margin-bottom: 1.5vh; }
+    #layar.ada-foto .besar { font-size: min(6vw, 9vh); }
+    #layar.ada-foto .nama { font-size: min(6vw, 9vh); margin: 1.5vh 0; }
+    #layar.ada-foto .kecil { font-size: min(3.2vw, 4.5vh); }
+    /* Tombol suara */
+    #btnSuara { position: fixed; top: 10px; left: 10px; z-index: 50; width: 44px; height: 44px; border-radius: 50%;
+                padding: 0; font-size: 20px; background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.4); }
     /* Mode layar (laptop / proyektor) */
     body.mode-layar .wrap { max-width: 900px; }
     body.mode-layar h1 { font-size: 40px; }
@@ -80,6 +103,7 @@
     </div>
   </div>
 
+<button id="btnSuara" onclick="ubahSuara()" aria-label="Suara">🔊</button>
 <div id="layar"></div>
 
 <script>
@@ -87,6 +111,11 @@
   // Alamat web app Apps Script (hasil Deploy, berakhiran /exec)
   const API_URL = 'https://script.google.com/macros/s/AKfycbynnIbA-TiK1ebj2BDSSoZBFqe8Lz7kITnDY7448gGt5_dc3qjHattle33yVgvQxGE/exec';
   const NAMA_ACARA = 'Check-in Wali Santri';
+  // Alamat GitHub Pages Anda (untuk foto wisudawan di folder foto/ dan latar HP latar-hp.jpg)
+  const ALAMAT_FOTO = 'https://mubiku.github.io/checkin-acara/';
+  // Suara saat scan: true = hidup, false = mati
+  const SUARA_HP = true;
+  const SUARA_LAYAR = true;
   const VIDEO_YOUTUBE_ID = 'hMriuK-WS2A'; // ID video YouTube untuk latar; kosongkan ('') jika tidak dipakai
   // ================================
 
@@ -158,6 +187,7 @@
   let idTampil = null;
 
   function masuk() {
+    siapkanSuara();
     pin = document.getElementById('pin').value;
     api('cek', { kode: '', pin: pin })
       .then(function (r) {
@@ -176,6 +206,7 @@
     if (e.key === 'Enter') masuk();
   });
   document.getElementById('foto').addEventListener('change', bacaFoto);
+  document.addEventListener('click', siapkanSuara);
   document.getElementById('manual').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') cekManual();
   });
@@ -281,16 +312,84 @@
       });
   }
 
+  // ---------- Suara ----------
+  let audioCtx = null;
+  let suaraNyala = true;
+
+  function siapkanSuara() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (e) {}
+  }
+
+  function nada(freq, mulai, durasi, jenis, vol) {
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    const t = audioCtx.currentTime + mulai;
+    o.type = jenis || 'sine';
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol || 0.3, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + durasi);
+    o.connect(g);
+    g.connect(audioCtx.destination);
+    o.start(t);
+    o.stop(t + durasi + 0.05);
+  }
+
+  function bunyi(r) {
+    if (!suaraNyala || !audioCtx) return;
+    try {
+      const wisuda = String(r.kategori || '').indexOf('WISUDAWAN') === 0;
+      if (r.status === 'VALID') {
+        if (wisuda) {
+          // Wisudawan: fanfare naik
+          [523.25, 659.25, 783.99].forEach(function (f, i) { nada(f, i * 0.13, 0.25, 'triangle', 0.35); });
+          nada(1046.5, 0.39, 0.9, 'triangle', 0.4);
+          nada(523.25, 0.39, 0.9, 'sine', 0.25);
+        } else {
+          // Benar: ding-ding naik
+          nada(880, 0, 0.18, 'sine', 0.35);
+          nada(1320, 0.16, 0.3, 'sine', 0.35);
+        }
+      } else if (r.status === 'SUDAH') {
+        // Kuota habis: dua bunyi peringatan
+        nada(330, 0, 0.18, 'square', 0.2);
+        nada(330, 0.28, 0.18, 'square', 0.2);
+      } else if (r.status === 'PALSU') {
+        // Palsu: dengung rendah panjang
+        nada(160, 0, 0.7, 'sawtooth', 0.25);
+      }
+    } catch (e) {}
+  }
+
+  function ubahSuara() {
+    siapkanSuara();
+    suaraNyala = !suaraNyala;
+    document.getElementById('btnSuara').textContent = suaraNyala ? '🔊' : '🔇';
+    if (suaraNyala) bunyi({ status: 'VALID', kategori: 'UMUM' });
+  }
+
+  function fotoUrl(f) {
+    f = String(f);
+    return /^https?:\/\//.test(f) ? f : ALAMAT_FOTO + 'foto/' + encodeURIComponent(f);
+  }
+
   // ---------- Tampilan ----------
   function isiStat(r) {
     if (r.hadir !== undefined) {
-      document.getElementById('stat').textContent = 'Hadir: ' + r.hadir + ' / ' + r.total;
+      let t = 'Hadir: ' + r.hadir + ' / ' + r.total;
+      if (r.vipTotal) t += '  ·  VIP: ' + r.vipHadir + ' / ' + r.vipTotal;
+      if (r.wisTotal) t += '  ·  Wisudawan: ' + r.wisHadir + ' / ' + r.wisTotal;
+      document.getElementById('stat').textContent = t;
     }
   }
 
   function tampilIdle() {
     const box = document.getElementById('hasil');
     box.className = 'kotak';
+    box.style.boxShadow = '';
     box.textContent = (MODE === 'layar')
       ? 'Menunggu tamu melakukan scan...'
       : 'Arahkan kamera ke QR code';
@@ -308,6 +407,8 @@
     const box = document.getElementById('hasil');
     const penuh = (MODE !== 'hp');   // mode HP: hasil ringkas di kotak, tanpa popup layar penuh
     isiStat(r);
+    box.style.boxShadow = '';
+    layar.style.boxShadow = '';
 
     if (r.status === 'LOADING') {
       box.className = 'kotak';
@@ -325,6 +426,18 @@
       return;
     }
 
+    // Suara
+    if ((r.status === 'VALID' || r.status === 'SUDAH' || r.status === 'PALSU') &&
+        (MODE === 'hp' ? SUARA_HP : (MODE === 'layar' ? SUARA_LAYAR : true))) {
+      bunyi(r);
+    }
+
+    const k = String(r.kategori || 'UMUM');
+    const vip = k.indexOf('VIP') >= 0;
+    const wisuda = k.indexOf('WISUDAWAN') === 0;
+    const dikenal = (r.status === 'VALID' || r.status === 'SUDAH');
+    const adaFoto = wisuda && !!r.foto && dikenal;
+
     const target = penuh ? layar : box;
     const kls = penuh
       ? { besar: 'besar', nama: 'nama', kecil: 'kecil' }
@@ -337,17 +450,53 @@
       target.appendChild(d);
     }
 
+    function lencana() {
+      let kelas = 'umum', teks = 'UMUM';
+      if (wisuda && vip) { kelas = 'wisudavip'; teks = '★ 🎓 WISUDAWAN VIP'; }
+      else if (wisuda) { kelas = 'wisuda'; teks = '🎓 WISUDAWAN'; }
+      else if (vip) { kelas = 'vip'; teks = '★ VIP'; }
+      tambah('lencana ' + kelas, teks);
+    }
+
+    function foto() {
+      if (!adaFoto) return;
+      const im = document.createElement('img');
+      im.className = 'foto';
+      im.alt = '';
+      im.onerror = function () { im.style.display = 'none'; };
+      im.src = fotoUrl(r.foto);
+      target.appendChild(im);
+    }
+
+    function infoTamu() {
+      if (wisuda) {
+        tambah(kls.kecil, 'Wisudawan' +
+          ((r.santri && r.santri !== r.nama) ? ': ' + r.santri : '') +
+          (r.kelas ? ' (kelas ' + r.kelas + ')' : ''));
+      } else {
+        tambah(kls.kecil, 'Wali dari ' + r.santri + ' (kelas ' + r.kelas + ')');
+      }
+    }
+
     let warna = 'error';
     if (r.status === 'VALID') {
       warna = 'valid';
-      tambah(kls.besar, '✔ BELUM DIGUNAKAN');
+      lencana();
+      foto();
+      tambah(kls.besar, '✔ SILAKAN MASUK');
       tambah(kls.nama, r.nama);
-      tambah(kls.kecil, 'Silakan masuk. Wali dari ' + r.santri + ' (kelas ' + r.kelas + ')');
+      tambah(kls.kecil, 'Scan ke-' + r.ke + ' dari ' + r.maks +
+        (r.ke >= r.maks ? ' (kuota habis)' : ' (sisa ' + (r.maks - r.ke) + 'x)'));
+      infoTamu();
     } else if (r.status === 'SUDAH') {
       warna = 'sudah';
-      tambah(kls.besar, '⚠ SUDAH DIGUNAKAN');
+      lencana();
+      foto();
+      tambah(kls.besar, '⚠ KUOTA SCAN HABIS');
       tambah(kls.nama, r.nama);
-      tambah(kls.kecil, 'Check-in sebelumnya: ' + r.waktu);
+      tambah(kls.kecil, 'Sudah scan ' + r.jumlah + ' dari ' + r.maks + ' kali');
+      tambah(kls.kecil, 'Scan 1: ' + r.waktu +
+        ((r.waktu2 && r.waktu2 !== '-') ? '  |  Scan 2: ' + r.waktu2 : ''));
     } else if (r.status === 'PALSU') {
       warna = 'palsu';
       tambah(kls.besar, '✖ QR PALSU / TIDAK TERDAFTAR');
@@ -358,8 +507,13 @@
       tambah(kls.kecil, r.pesan || 'Terjadi kesalahan');
     }
 
+    // Bingkai: emas untuk VIP, ungu untuk wisudawan
+    const bingkai = vip ? '#facc15' : (wisuda ? '#8b5cf6' : '');
+    target.style.boxShadow = (bingkai && dikenal)
+      ? 'inset 0 0 0 ' + (penuh ? '14px ' : '6px ') + bingkai : '';
+
     if (penuh) {
-      layar.className = warna;
+      layar.className = warna + (adaFoto ? ' ada-foto' : '');
       const x = document.createElement('button');
       x.className = 'x';
       x.textContent = '✕';
@@ -380,6 +534,17 @@
   if (FOTO_LATAR) {
     document.body.style.setProperty('--foto', 'url("' + FOTO_LATAR + '")');
     document.body.classList.add('berlatar');
+  }
+
+  // Foto latar khusus HP (potret): unggah file latar-hp.jpg ke GitHub, satu folder dengan index.html.
+  // Kalau file belum ada, HP tetap memakai banner.
+  if (MODE === 'hp') {
+    const uji = new Image();
+    uji.onload = function () {
+      document.body.style.setProperty('--foto-hp', 'url("' + ALAMAT_FOTO + 'latar-hp.jpg")');
+      document.body.classList.add('latar-hp');
+    };
+    uji.src = ALAMAT_FOTO + 'latar-hp.jpg';
   }
 </script>
 </body>
