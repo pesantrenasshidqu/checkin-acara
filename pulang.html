@@ -74,13 +74,10 @@
     #layar .x { position: absolute; top: 16px; right: 16px; width: 60px; height: 60px; border-radius: 50%;
                 border: 3px solid currentColor; background: rgba(0,0,0,.25); color: inherit;
                 font-size: 30px; line-height: 1; padding: 0; cursor: pointer; }
-    /* Kepulangan: lencana kategori, warna status, dan tombol di popup */
+    /* Kepulangan: lencana status izin, warna, dan tombol di popup */
     .lencana.boleh { background: #16a34a; color: #fff; }
-    .lencana.tunda { background: #f59e0b; color: #111; }
-    .lencana.wisuda { background: #7c3aed; color: #fff; }
     .lencana.larang { background: #fff; color: #b91c1c; }
     .biru { background: #0369a1; color: #fff; }
-    .teal { background: #0f766e; color: #fff; }
     #layar { overflow-y: auto; }
     #layar.pl .lencana { font-size: min(4vw, 5.5vh); margin-bottom: 1.5vh; }
     #layar.pl .besar { font-size: min(6.5vw, 8vh); }
@@ -139,6 +136,10 @@
   // Suara saat scan: true = hidup, false = mati
   const SUARA_HP = true;
   const SUARA_LAYAR = true;
+  // Setelah petugas memilih jawaban terakhir, langsung disimpan (false). Ganti true bila ingin ada layar konfirmasi
+  const KONFIRMASI_AKHIR = false;
+  // Layar hasil menutup sendiri setelah sekian milidetik (0 = tidak menutup sendiri). Layar penolakan dua kali lebih lama
+  const TUTUP_OTOMATIS_MS = 3000;
   // ================================
 
   // Mode halaman (diatur lewat alamat web):
@@ -214,6 +215,7 @@
   let waktuTerakhir = 0;
   let idTampil = null;
   let qna = null;   // keadaan pertanyaan yang sedang dijawab petugas
+  let timerTutup = null;
 
   function masuk() {
     siapkanSuara();
@@ -226,7 +228,7 @@
         document.getElementById('app').hidden = false;
         isiStat(r);
         tampilIdle();
-        if (MODE === 'layar') pantau(); else mulaiKamera();
+        if (MODE === 'layar') pantau(); else { mulaiKamera(); jagaSambungan(); }
       })
       .catch(function (e) { alert('Gagal terhubung ke server: ' + e.message); });
   }
@@ -239,6 +241,18 @@
   document.getElementById('manual').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') cekManual();
   });
+
+  // Menjaga server tetap "hangat" dan hitungan tetap segar: permintaan ringan tiap 40 detik saat petugas tidak sedang bekerja
+  function jagaSambungan() {
+    setInterval(function () {
+      if (document.getElementById('layar').style.display === 'flex') return;
+      api('pl_cek', { kode: '', pin: pin })
+        .then(function (r) {
+          if (r && r.total !== undefined && document.getElementById('layar').style.display !== 'flex') isiStat(r);
+        })
+        .catch(function () {});
+    }, 40000);
+  }
 
   // ---------- Mode layar: memantau hasil terbaru dari HP ----------
   function catatSambung(ok) {
@@ -379,18 +393,14 @@
     if (!suaraNyala || !audioCtx) return;
     try {
       const s = r.status;
-      if (s === 'PULANG_OK') {                       // pulang dicatat: ding-ding naik
+      if (s === 'PULANG_OK') {                         // pulang dicatat: ding-ding naik
         nada(880, 0, 0.18, 'sine', 0.35);
         nada(1320, 0.16, 0.3, 'sine', 0.35);
-      } else if (s === 'MAKAN_OK') {                 // jatah makan dicatat: dua nada lembut
-        nada(660, 0, 0.2, 'triangle', 0.3);
-        nada(990, 0.18, 0.35, 'triangle', 0.3);
-      } else if (s === 'BOLEH' || s === 'PROSES') {  // boleh pulang, menunggu pertanyaan: satu nada pendek
+      } else if (s === 'BOLEH' || s === 'PROSES') {    // boleh pulang, menunggu pertanyaan: satu nada pendek
         nada(740, 0, 0.18, 'sine', 0.3);
-      } else if (s === 'DILARANG' || s === 'PALSU') { // ditolak: dengung rendah
+      } else if (s === 'DILARANG' || s === 'PALSU') {  // ditolak: dengung rendah
         nada(160, 0, 0.7, 'sawtooth', 0.25);
-      } else if (s === 'BELUM' || s === 'LEWAT' || s === 'SUDAH_PULANG' || s === 'MAKAN_HABIS' ||
-                 s === 'TANGGAL_KOSONG' || s === 'KATEGORI_KOSONG') {   // perlu perhatian: dua bunyi peringatan
+      } else if (s === 'SUDAH_PULANG' || s === 'IZIN_KOSONG') {   // perlu perhatian: dua bunyi peringatan
         nada(330, 0, 0.18, 'square', 0.2);
         nada(330, 0.28, 0.18, 'square', 0.2);
       }
@@ -408,7 +418,7 @@
   function isiStat(r) {
     if (r.total !== undefined) {
       document.getElementById('stat').textContent =
-        'Pulang: ' + r.pulang + ' / ' + r.total + '  ·  Ambil makan: ' + r.makan;
+        'Pulang: ' + r.pulang + ' / ' + r.total + '  ·  Dilarang: ' + r.dilarang;
     }
   }
 
@@ -421,6 +431,7 @@
   }
 
   function tutupLayar() {
+    clearTimeout(timerTutup);
     document.getElementById('layar').style.display = 'none';
     qna = null;
     tampilIdle();
@@ -435,21 +446,18 @@
     return e;
   }
 
-  function lencanaKategori(kat) {
-    let kelas = 'umum';
-    if (kat === 'BOLEH PULANG') kelas = 'boleh';
-    else if (kat === 'PULANG DITUNDA') kelas = 'tunda';
-    else if (kat === 'PULANG WISUDAWAN') kelas = 'wisuda';
-    else if (kat === 'DILARANG PULANG') kelas = 'larang';
-    return el('div', 'lencana ' + kelas, kat || 'KATEGORI BELUM DIISI');
+  function lencanaIzin(izin) {
+    if (izin === 'BOLEH PULANG') return el('div', 'lencana boleh', izin);
+    if (izin === 'DILARANG PULANG') return el('div', 'lencana larang', izin);
+    return el('div', 'lencana umum', 'STATUS IZIN BELUM DIISI');
   }
 
-  function ringkasIzin(r) {
-    if (!r.mulai) return '';
-    if (r.kategori === 'PULANG WISUDAWAN' || (r.akhir && r.akhir !== r.mulai)) {
-      return 'Izin pulang: ' + r.mulai + (r.akhir ? ' s/d ' + r.akhir : '');
-    }
-    return 'Pulang mulai: ' + r.mulai;
+  function infoSantri(r) {
+    return (r.kelas ? 'Kelas ' + r.kelas : '') + (r.noInduk ? ' · No. Induk ' + r.noInduk : '');
+  }
+
+  function infoKelas(r) {
+    return r.kelasTotal ? 'Kelas ' + r.kelas + ': ' + r.kelasPulang + ' / ' + r.kelasTotal + ' sudah pulang' : '';
   }
 
   function rincianDengan(r) {
@@ -458,30 +466,20 @@
 
   // Menentukan warna, judul, dan keterangan untuk tiap status dari server
   function susun(r) {
-    const izin = ringkasIzin(r);
     switch (r.status) {
       case 'PALSU':
-        return { warna: 'palsu', judul: '✖ QR TIDAK TERDAFTAR', baris: ['Jangan diizinkan'], nama: false };
+        return { warna: 'palsu', judul: '✖ QR TIDAK TERDAFTAR', baris: ['Jangan diizinkan'], nama: false, tutup: 1 };
       case 'DILARANG':
-        return { warna: 'palsu', judul: '⛔ DILARANG PULANG', baris: ['Santri ini tidak boleh pulang'], makan: true };
-      case 'BELUM':
-        return { warna: 'sudah', judul: '⏳ BELUM WAKTUNYA PULANG', baris: [izin], makan: true };
-      case 'LEWAT':
-        return { warna: 'sudah', judul: '⚠ MASA IZIN PULANG SUDAH LEWAT', baris: [izin, 'Hubungi panitia'], makan: true };
-      case 'TANGGAL_KOSONG':
-        return { warna: 'sudah', judul: '⚠ TANGGAL PULANG BELUM DIISI', baris: ['Hubungi panitia'], makan: true };
-      case 'KATEGORI_KOSONG':
-        return { warna: 'sudah', judul: '⚠ KATEGORI BELUM DIISI', baris: ['Hubungi panitia'], makan: true };
+        return { warna: 'palsu', judul: '⛔ DILARANG PULANG',
+          baris: [r.catatan ? 'Boleh pulang: ' + r.catatan : 'Belum ada tanggal boleh pulang'], tutup: 2 };
+      case 'IZIN_KOSONG':
+        return { warna: 'sudah', judul: '⚠ STATUS IZIN BELUM DIISI', baris: ['Hubungi panitia'], tutup: 2 };
       case 'SUDAH_PULANG':
-        return { warna: 'sudah', judul: '⚠ SUDAH PULANG', baris: ['Pulang pada: ' + r.waktu, rincianDengan(r)] };
+        return { warna: 'sudah', judul: '⚠ SUDAH PULANG', baris: ['Pulang pada: ' + r.waktu, rincianDengan(r)], tutup: 1.5 };
       case 'PROSES':
         return { warna: 'biru', judul: '⏳ SEDANG DIPROSES', baris: ['Menunggu pertanyaan petugas'] };
       case 'PULANG_OK':
-        return { warna: 'valid', judul: '✔ SILAKAN PULANG', baris: [rincianDengan(r), izin] };
-      case 'MAKAN_OK':
-        return { warna: 'teal', judul: '✔ JATAH MAKAN DICATAT', baris: ['Silakan ambil jatah makan'] };
-      case 'MAKAN_HABIS':
-        return { warna: 'sudah', judul: '⚠ JATAH MAKAN SUDAH DIAMBIL', baris: ['Diambil pada: ' + r.waktu] };
+        return { warna: 'valid', judul: '✔ SILAKAN PULANG', baris: [rincianDengan(r), infoKelas(r)], tutup: 1 };
       case 'PIN_SALAH':
         return { warna: 'error', judul: 'PIN salah', baris: [], nama: false };
       default:
@@ -501,6 +499,7 @@
     const box = document.getElementById('hasil');
     isiStat(r);
     layar.style.boxShadow = '';
+    clearTimeout(timerTutup);
 
     if (r.status === 'LOADING') {
       box.className = 'kotak';
@@ -530,22 +529,24 @@
     const s = susun(r);
     layar.innerHTML = '';
     layar.className = s.warna + ' pl';
-    if (s.nama !== false && r.kategori) layar.appendChild(lencanaKategori(r.kategori));
+    if (s.nama !== false && r.izin !== undefined) layar.appendChild(lencanaIzin(r.izin));
     layar.appendChild(el('div', 'besar', s.judul));
-    if (s.nama !== false && r.nama) layar.appendChild(el('div', 'nama', r.nama));
+    if (s.nama !== false && r.nama) {
+      layar.appendChild(el('div', 'nama', r.nama));
+      const info = infoSantri(r);
+      if (info) layar.appendChild(el('div', 'kecil', info));
+    }
     s.baris.forEach(function (b) { if (b) layar.appendChild(el('div', 'kecil', b)); });
 
     if (bisaAksi) {
       const kotak = el('div', 'aksi');
-      if (s.makan && r.bolehMakan) {
-        const b = el('button', 'btn utama', 'Catat jatah makan (untuk wali yang datang)');
-        b.onclick = function () { qnaMakanLangsung(r); };
-        kotak.appendChild(b);
-      }
-      const t = el('button', 'btn', 'Tutup / scan berikutnya');
+      const t = el('button', 'btn utama', 'Tutup / scan berikutnya');
       t.onclick = tutupLayar;
       kotak.appendChild(t);
       layar.appendChild(kotak);
+      if (TUTUP_OTOMATIS_MS > 0 && s.tutup) {
+        timerTutup = setTimeout(tutupLayar, TUTUP_OTOMATIS_MS * s.tutup);
+      }
     }
     tambahTombolX(layar);
     layar.style.display = 'flex';
@@ -553,20 +554,10 @@
 
   // ---------- Pertanyaan sebelum pulang ----------
   function qnaMulai(r) {
+    clearTimeout(timerTutup);
     qna = {
-      kode: r.kode, nama: r.nama, kategori: r.kategori, mulai: r.mulai, akhir: r.akhir,
-      opsi: r.opsi, bolehMakan: r.bolehMakan,
-      langkah: 1, dengan: '', detail: '', ket: '', kirim: false, langsung: false
-    };
-    qnaGambar();
-  }
-
-  // Dari layar penolakan: hanya mengambil jatah makan, langsung ke konfirmasi
-  function qnaMakanLangsung(r) {
-    qna = {
-      kode: r.kode, nama: r.nama, kategori: r.kategori, mulai: r.mulai, akhir: r.akhir,
-      opsi: null, bolehMakan: true,
-      langkah: 3, dengan: 'Tidak pulang', detail: '', ket: '', kirim: false, langsung: true
+      kode: r.kode, nama: r.nama, kelas: r.kelas, noInduk: r.noInduk, izin: r.izin, opsi: r.opsi,
+      langkah: 1, dengan: '', detail: '', ket: '', kirim: false
     };
     qnaGambar();
   }
@@ -578,10 +569,10 @@
     layar.style.boxShadow = '';
     layar.style.display = 'flex';
 
-    layar.appendChild(lencanaKategori(qna.kategori));
+    layar.appendChild(lencanaIzin(qna.izin));
     layar.appendChild(el('div', 'nama', qna.nama));
-    const izin = ringkasIzin(qna);
-    if (izin) layar.appendChild(el('div', 'kecil', izin));
+    const info = infoSantri(qna);
+    if (info) layar.appendChild(el('div', 'kecil', info));
 
     const kotak = el('div', 'aksi');
     function tombol(teks, fn, utama, mati) {
@@ -592,15 +583,14 @@
       return b;
     }
     function ke(langkah) { return function () { qna.langkah = langkah; qnaGambar(); }; }
+    // Langkah terakhir: simpan langsung, atau tampilkan layar konfirmasi bila KONFIRMASI_AKHIR = true
+    function selesai() { if (KONFIRMASI_AKHIR) { qna.langkah = 3; qnaGambar(); } else { qnaKirim(); } }
     let fokus = null;
 
     if (qna.langkah === 1) {
       layar.appendChild(el('div', 'besar', 'Pulang dengan siapa?'));
       tombol('Dijemput', function () { qna.dengan = 'Dijemput'; qna.detail = ''; qna.ket = ''; qna.langkah = 2; qnaGambar(); });
       tombol('Pulang Sendiri', function () { qna.dengan = 'Pulang Sendiri'; qna.detail = ''; qna.ket = ''; qna.langkah = 2; qnaGambar(); });
-      tombol('Tidak pulang (ambil makan saja)' + (qna.bolehMakan ? '' : ' — sudah diambil'),
-        function () { qna.dengan = 'Tidak pulang'; qna.detail = ''; qna.ket = ''; qna.langkah = 3; qnaGambar(); },
-        false, !qna.bolehMakan);
       tombol('Batal', tutupLayar);
     } else if (qna.langkah === 2) {
       const dijemput = (qna.dengan === 'Dijemput');
@@ -609,11 +599,10 @@
         tombol(o === 'Lainnya' ? 'Lainnya...' : o, function () {
           qna.detail = o;
           qna.ket = '';
-          qna.langkah = (o === 'Lainnya') ? 21 : 3;
-          qnaGambar();
-        });
+          if (o === 'Lainnya') { qna.langkah = 21; qnaGambar(); } else { selesai(); }
+        }, false, qna.kirim);
       });
-      tombol('Kembali', ke(1));
+      tombol('Kembali', ke(1), false, qna.kirim);
     } else if (qna.langkah === 21) {
       layar.appendChild(el('div', 'besar', 'Tulis keterangan "Lainnya"'));
       const inp = el('input', 'ket');
@@ -621,45 +610,36 @@
       inp.placeholder = 'Contoh: dijemput paman dari desa (minimal 3 huruf)';
       inp.maxLength = 120;
       inp.value = qna.ket;
+      inp.disabled = qna.kirim;
       kotak.appendChild(inp);
-      const lanjut = tombol('Lanjut', ke(3), true, qna.ket.trim().length < 3);
+      const lanjut = tombol(qna.kirim ? 'Menyimpan...' : (KONFIRMASI_AKHIR ? 'Lanjut' : 'Simpan'), selesai, true,
+        qna.kirim || qna.ket.trim().length < 3);
       inp.oninput = function () {
         qna.ket = inp.value;
         lanjut.disabled = inp.value.trim().length < 3;
       };
-      tombol('Kembali', ke(2));
+      tombol('Kembali', ke(2), false, qna.kirim);
       fokus = inp;
     } else {
-      const makan = (qna.dengan === 'Tidak pulang');
       layar.appendChild(el('div', 'besar', 'Periksa lagi'));
-      if (makan) {
-        layar.appendChild(el('div', 'kecil', 'Hanya mengambil jatah makan (tidak pulang)'));
-      } else {
-        layar.appendChild(el('div', 'kecil', 'Pulang dengan: ' + qna.dengan));
-        layar.appendChild(el('div', 'kecil', 'Detail: ' + qna.detail + (qna.ket.trim() ? ' — ' + qna.ket.trim() : '')));
-      }
-      tombol(qna.kirim ? 'Menyimpan...' : (makan ? 'KONFIRMASI: CATAT JATAH MAKAN' : 'KONFIRMASI: IZINKAN PULANG'),
-        qnaKirim, true, qna.kirim);
-      if (!qna.langsung) {
-        tombol('Kembali', ke(makan ? 1 : (qna.detail === 'Lainnya' ? 21 : 2)), false, qna.kirim);
-      }
+      layar.appendChild(el('div', 'kecil', 'Pulang dengan: ' + qna.dengan));
+      layar.appendChild(el('div', 'kecil', 'Detail: ' + qna.detail + (qna.ket.trim() ? ' — ' + qna.ket.trim() : '')));
+      tombol(qna.kirim ? 'Menyimpan...' : 'KONFIRMASI: IZINKAN PULANG', qnaKirim, true, qna.kirim);
+      tombol('Kembali', ke(qna.detail === 'Lainnya' ? 21 : 2), false, qna.kirim);
       tombol('Batal', tutupLayar, false, qna.kirim);
     }
 
     layar.appendChild(kotak);
     tambahTombolX(layar);
-    if (fokus) fokus.focus();
+    if (fokus && !qna.kirim) fokus.focus();
   }
 
   function qnaKirim() {
     if (!qna || qna.kirim) return;
     qna.kirim = true;
     qnaGambar();
-    const makan = (qna.dengan === 'Tidak pulang');
     api('pl_simpan', {
-      kode: qna.kode, pin: pin,
-      tindakan: makan ? 'MAKAN' : 'PULANG',
-      dengan: qna.dengan, detail: qna.detail, ket: qna.ket.trim()
+      kode: qna.kode, pin: pin, dengan: qna.dengan, detail: qna.detail, ket: qna.ket.trim()
     })
       .then(function (r) { qna = null; tampil(r); })
       .catch(function (e) {
