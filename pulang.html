@@ -186,7 +186,7 @@
   // Alamat web app Apps Script (hasil Deploy, berakhiran /exec). Sama dengan alamat di index.html
   const API_URL = 'https://script.google.com/macros/s/AKfycbynnIbA-TiK1ebj2BDSSoZBFqe8Lz7kITnDY7448gGt5_dc3qjHattle33yVgvQxGE/exec';
   const NAMA_ACARA = 'Kepulangan Santri';
-  const VIDEO_YOUTUBE_ID = 'hMriuK-WS2A';   // ID video YouTube untuk latar di layar laptop; kosongkan jika tidak dipakai
+  const VIDEO_YOUTUBE_ID = '';   // ID video YouTube untuk latar di layar laptop; kosongkan jika tidak dipakai
   // Alamat folder situs ini (otomatis mengikuti alamat GitHub Pages Anda)
   const ALAMAT_FOTO = new URL('.', location.href).href;
   // Suara saat scan: true = hidup, false = mati
@@ -888,6 +888,14 @@
       _warna: null, _bunyi: null, _judul: null, _info: null
     };
     if (r.status === 'BOLEH') {
+      slots.push(s0);
+      gambarSlot(s0, true);
+      return;
+    }
+    // Status PROSES: santri sedang dijawab di HP, tampilkan sebagai slot biru tanpa tombol
+    if (r.status === 'PROSES') {
+      s0._warna = 'biru-s'; s0._judul = '⏳ SEDANG DIPROSES'; s0._info = 'Menunggu jawaban petugas';
+      s0.langkah = 99;
       slots.push(s0);
       gambarSlot(s0, true);
       return;
