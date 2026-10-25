@@ -106,7 +106,18 @@
                         border-radius:8px; border:2px solid #fff; color:#111; margin-bottom:4px; }
     .slot .progres-s { position:absolute; bottom:0; left:0; height:4px; background:rgba(255,255,255,.6);
                        border-radius:0 0 0 16px; transition:width linear; }
-    .slot.valid-s { background:#15803d; color:#fff; }
+    .slot.valid-s { background:linear-gradient(145deg,#16a34a 0%,#15803d 58%,#166534 100%); color:#fff;
+                    border:1px solid rgba(255,255,255,.28); box-shadow:0 12px 35px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.18); }
+    .slot.valid-s::before { content:'✦'; position:absolute; top:12%; left:9%; font-size:clamp(18px,2.4vw,36px); color:rgba(255,255,255,.22); }
+    .slot.valid-s::after { content:'✦'; position:absolute; bottom:13%; right:10%; font-size:clamp(22px,3vw,44px); color:rgba(255,255,255,.2); }
+    .slot.valid-s .lencana-s { order:1; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.65); color:#fff; letter-spacing:.04em; }
+    .slot.valid-s .tanya-s { order:2; font-size:clamp(17px,2.2vw,34px); line-height:1.12; text-shadow:0 2px 8px rgba(0,0,0,.18); margin:8px 0; }
+    .slot.valid-s .nama-s { order:3; text-transform:uppercase; letter-spacing:.015em; text-shadow:0 2px 8px rgba(0,0,0,.16); }
+    .slot.valid-s .kelas-s { order:4; }
+    .slot.valid-s .info-s { order:5; padding:7px 12px; border-radius:10px; background:rgba(0,0,0,.12); max-width:95%; }
+    .slot.valid-s .salam-s { order:6; margin-top:10px; font-size:clamp(15px,2vw,28px); font-weight:900; letter-spacing:.12em; text-transform:uppercase; }
+    .slot.valid-s .pesan-s { order:7; margin-top:4px; font-size:clamp(10px,1.05vw,16px); opacity:.9; }
+    .slot.valid-s .progres-s { height:5px; background:rgba(255,255,255,.9); }
     .slot.sudah-s { background:#b45309; color:#fff; }
     .slot.palsu-s { background:#b91c1c; color:#fff; }
     .slot.biru-s  { background:#0066AE; color:#fff; }
@@ -785,7 +796,7 @@
 
     div.appendChild(elT('div', 'lencana-s ' + (s.izin === 'BOLEH PULANG' ? 'boleh' : 'larang'), s.izin));
     div.appendChild(elT('div', 'nama-s', s.nama));
-    div.appendChild(elT('div', 'sub-s', 'Kelas ' + s.kelas + (s.noInduk ? ' · No. Induk ' + s.noInduk : '')));
+    div.appendChild(elT('div', 'sub-s kelas-s', 'Kelas ' + s.kelas + (s.noInduk ? ' · No. Induk ' + s.noInduk : '')));
 
     const kotak = elT('div', 'aksi-s');
     function tombol(teks, fn, utama, mati) {
@@ -842,7 +853,11 @@
         const w = s._warna || 'sudah-s';
         div.classList.add(w);
         div.appendChild(elT('div', 'tanya-s', s._judul || ''));
-        if (s._info) div.appendChild(elT('div', 'sub-s', s._info));
+        if (s._info) div.appendChild(elT('div', 'sub-s info-s', s._info));
+        if (w === 'valid-s') {
+          div.appendChild(elT('div', 'salam-s', '✦ SELAMAT JALAN! ✦'));
+          div.appendChild(elT('div', 'pesan-s', 'Semoga perjalanan lancar, selamat sampai tujuan.'));
+        }
         const bar = elT('div', 'progres-s'); div.appendChild(bar);
         if (SUARA_LAYAR) bunyi({ status: s._bunyi || 'SUDAH_PULANG' });
         if (TUTUP_SLOT_MS > 0) {
