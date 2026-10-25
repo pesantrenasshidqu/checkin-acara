@@ -30,7 +30,7 @@
     .baris { display: flex; gap: 8px; margin-top: 12px; }
     input, button { font-size: 16px; padding: 10px; border-radius: 8px; border: 1px solid #9ca3af; }
     input { flex: 1; min-width: 0; }
-    button { background: #1d4ed8; color: #fff; border: none; }
+    button { background: #0066AE; color: #fff; border: none; }
     #login { margin-top: 40px; text-align: center; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.6); }
     #login .baris { justify-content: center; }
     /* Lencana kategori tamu */
@@ -109,7 +109,7 @@
     .slot.valid-s { background:#15803d; color:#fff; }
     .slot.sudah-s { background:#b45309; color:#fff; }
     .slot.palsu-s { background:#b91c1c; color:#fff; }
-    .slot.biru-s  { background:#0369a1; color:#fff; }
+    .slot.biru-s  { background:#0066AE; color:#fff; }
     #arena[data-n="1"] { grid-template-columns:1fr; grid-template-rows:1fr; }
     #arena[data-n="2"] { grid-template-columns:1fr 1fr; grid-template-rows:1fr; }
     #arena[data-n="3"],#arena[data-n="4"] { grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }
@@ -131,7 +131,7 @@
     /* Kepulangan: lencana status izin, warna, dan tombol di popup */
     .lencana.boleh { background: #16a34a; color: #fff; }
     .lencana.larang { background: #fff; color: #b91c1c; }
-    .biru { background: #0369a1; color: #fff; }
+    .biru { background: #0066AE; color: #fff; }
     #layar { overflow-y: auto; }
     #layar.pl .lencana { font-size: min(4vw, 5.5vh); margin-bottom: 1.5vh; }
     #layar.pl .besar { font-size: min(6.5vw, 8vh); }
@@ -194,7 +194,7 @@
   const SUARA_LAYAR = true;
   const KONFIRMASI_AKHIR = false;
   const TUTUP_OTOMATIS_MS = 3000;
-  const TUTUP_SLOT_MS = 5000;
+  const TUTUP_SLOT_MS = 0;   // 0 = tidak menutup sendiri; slot hanya ditutup oleh tombol X setelah hasil akhir
   // Setelah petugas memilih jawaban terakhir, langsung disimpan (false). Ganti true bila ingin ada layar konfirmasi
   // Layar hasil menutup sendiri setelah sekian milidetik (0 = tidak menutup sendiri). Layar penolakan dua kali lebih lama
   // ================================
@@ -839,8 +839,10 @@
       if (s._info) div.appendChild(elT('div', 'sub-s', s._info));
       const bar = elT('div', 'progres-s'); div.appendChild(bar);
       if (SUARA_LAYAR) bunyi({ status: s._bunyi || 'SUDAH_PULANG' });
-      mulaiProgres(s);
-      hapusSlot(s, TUTUP_SLOT_MS);   // tutup otomatis hanya setelah hasil akhir
+      if (TUTUP_SLOT_MS > 0) {
+        mulaiProgres(s);
+        hapusSlot(s, TUTUP_SLOT_MS);
+      }
     }
 
     div.appendChild(kotak);
