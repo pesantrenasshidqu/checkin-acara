@@ -93,6 +93,7 @@
     .slot .sub-s   { opacity:.85; line-height:1.3; margin-bottom:4px; }
     .slot .tanya-s { font-weight:bold; margin:8px 0 6px; }
     .slot .aksi-s  { display:flex; flex-direction:column; gap:6px; width:100%; max-width:320px; }
+    .slot .aksi-s:empty { display:none; }
     .slot .aksi-s button { padding:9px 6px; border-radius:10px; border:2px solid rgba(255,255,255,.85);
                            background:rgba(0,0,0,.22); color:#fff; cursor:pointer; font-weight:500; width:100%; }
     .slot .aksi-s button:hover { background:rgba(0,0,0,.38); }
@@ -197,7 +198,7 @@
   // Alamat web app Apps Script (hasil Deploy, berakhiran /exec). Sama dengan alamat di index.html
   const API_URL = 'https://script.google.com/macros/s/AKfycbynnIbA-TiK1ebj2BDSSoZBFqe8Lz7kITnDY7448gGt5_dc3qjHattle33yVgvQxGE/exec';
   const NAMA_ACARA = 'Kepulangan Santri';
-  const VIDEO_YOUTUBE_ID = 'hMriuK-WS2A';   // ID video YouTube untuk latar di layar laptop; kosongkan jika tidak dipakai
+  const VIDEO_YOUTUBE_ID = '';   // ID video YouTube untuk latar di layar laptop; kosongkan jika tidak dipakai
   // Alamat folder situs ini (otomatis mengikuti alamat GitHub Pages Anda)
   const ALAMAT_FOTO = new URL('.', location.href).href;
   // Suara saat scan: true = hidup, false = mati
@@ -904,46 +905,71 @@
   function tampilMulti(r) {
     isiStat(r);
 
-    // Cari kartu santri yang sama. Status PROSES dan hasil akhir harus memperbarui
-    // kartu yang sudah ada, bukan membuat kartu baru untuk kode QR yang sama.
-    const kartuLama = r.kode ? slots.find(function (s) { return s.kode === r.kode; }) : null;
-    if (r.status === 'PROSES' && kartuLama) {
-      // Scan berulang selama petugas menjawab tidak boleh menggandakan kartu.
-      return;
-    }
+    // Mode layar hanya menampilkan informasi. Semua pertanyaan dijawab di HP petugas.
+    // Gunakan kode QR sebagai kunci agar status berikutnya memperbarui kartu yang sama.
+    const kode = String(r.kode || '').trim().toUpperCase();
+    const kartuLama = kode ? slots.find(function (s) {
+      return String(s.kode || '').trim().toUpperCase() === kode;
+    }) : null;
 
     const s0 = {
-      id: ++idUnik, kode: r.kode || '', nama: r.nama || '', kelas: r.kelas || '',
-      noInduk: r.noInduk || '', izin: r.izin || '', opsi: r.opsi || { dijemput: ['Wali santri asli','Wali santri lain','Kerabat/Teman','Lainnya'], sendiri: ['Bis','Travel','Kereta','Lainnya'] },
-      langkah: 1, dengan: '', detail: '', ket: '', kirim: false, timerId: null, el: null,
+      id: ++idUnik, kode: kode, nama: r.nama || '', kelas: r.kelas || '',
+      noInduk: r.noInduk || '', izin: r.izin || '',
+      opsi: r.opsi || { dijemput: ['Wali santri asli','Wali santri lain','Kerabat/Teman','Lainnya'], sendiri: ['Bis','Travel','Kereta','Lainnya'] },
+      langkah: 99, dengan: '', detail: '', ket: '', kirim: false, timerId: null, el: null,
       _warna: null, _bunyi: null, _judul: null, _info: null, _menunggu: false
     };
-    if (r.status === 'BOLEH') {
-      slots.push(s0);
-      gambarSlot(s0, true);
-      return;
-    }
-    // Status PROSES: santri sedang dijawab di HP, tampilkan sebagai slot biru tanpa tombol
-    if (r.status === 'PROSES') {
-      s0._warna = 'biru-s'; s0._judul = '⏳ SEDANG DIPROSES'; s0._info = 'Menunggu jawaban petugas';
-      s0._menunggu = true;
-      s0.langkah = 99;
-      slots.push(s0);
-      gambarSlot(s0, true);
-      return;
-    }
-    // hasil langsung (palsu, dilarang, sudah pulang, dsb)
-    if (r.status === 'PALSU') { s0._warna = 'palsu-s'; s0._bunyi = 'PALSU'; s0._judul = '✖ QR TIDAK TERDAFTAR'; }
-    else if (r.status === 'DILARANG') { s0._warna = 'palsu-s'; s0._bunyi = 'DILARANG'; s0._judul = '⛔ DILARANG PULANG'; s0._info = r.catatan || ''; }
-    else if (r.status === 'SUDAH_PULANG') { s0._warna = 'sudah-s'; s0._judul = '⚠ SUDAH PULANG'; s0._info = 'Pulang pada: ' + r.waktu; }
-    else if (r.status === 'IZIN_KOSONG') { s0._warna = 'sudah-s'; s0._judul = '⚠ STATUS IZIN BELUM DIISI'; s0._info = 'Hubungi panitia'; }
-    else { s0._warna = 'sudah-s'; s0._judul = '⚠ ' + r.status; s0._info = r.pesan || ''; }
-    s0.langkah = 99;
 
-    // Jika kartu PROSES untuk santri ini sudah ada, ubah kartu itu menjadi hasil akhir.
-    // Jangan menambahkan kartu kedua dengan nama yang sama.
-    if (kartuLama && kartuLama._menunggu) {
+    // Scan awal / status proses: buat satu kartu pasif, tanpa tombol pertanyaan.
+    if (r.status === 'BOLEH' || r.status === 'PROSES') {
+      const s = kartuLama || s0;
+      s.nama = r.nama || s.nama;
+      s.kelas = r.kelas || s.kelas;
+      s.noInduk = r.noInduk || s.noInduk;
+      s.izin = r.izin || s.izin;
+      s._warna = 'biru-s';
+      s._bunyi = null;
+      s._judul = '⏳ SEDANG DIPROSES';
+      s._info = 'Menunggu jawaban petugas';
+      s._menunggu = true;
+      s.langkah = 99;
+      if (!kartuLama) slots.push(s);
+      else clearTimeout(s.timerId);
+      gambarSlot(s, !kartuLama);
+      return;
+    }
+
+    // Pemetaan status akhir. Jangan menampilkan kode teknis PULANG_OK ke layar.
+    if (r.status === 'PULANG_OK') {
+      s0._warna = 'valid-s';
+      s0._bunyi = 'PULANG_OK';
+      s0._judul = '✔ SILAKAN PULANG';
+      s0._info = rincianDengan(r);
+      const kelasInfo = infoKelas(r);
+      if (kelasInfo) s0._info += (s0._info ? ' · ' : '') + kelasInfo;
+    } else if (r.status === 'SUDAH_PULANG') {
+      s0._warna = 'sudah-s'; s0._judul = '⚠ SUDAH PULANG';
+      s0._info = 'Pulang pada: ' + (r.waktu || '-');
+    } else if (r.status === 'DILARANG') {
+      s0._warna = 'palsu-s'; s0._bunyi = 'DILARANG'; s0._judul = '⛔ DILARANG PULANG';
+      s0._info = r.catatan ? 'Boleh pulang: ' + r.catatan : '';
+    } else if (r.status === 'PALSU') {
+      s0._warna = 'palsu-s'; s0._bunyi = 'PALSU'; s0._judul = '✖ QR TIDAK TERDAFTAR';
+      s0._info = 'Silakan periksa QR santri';
+    } else if (r.status === 'IZIN_KOSONG') {
+      s0._warna = 'sudah-s'; s0._judul = '⚠ STATUS IZIN BELUM DIISI'; s0._info = 'Hubungi panitia';
+    } else {
+      s0._warna = 'sudah-s'; s0._judul = '⚠ TERJADI KESALAHAN'; s0._info = r.pesan || '';
+    }
+    s0._menunggu = false;
+
+    // Jika kartu proses sudah ada, ubah kartu tersebut menjadi hasil akhir.
+    if (kartuLama) {
       clearTimeout(kartuLama.timerId);
+      kartuLama.nama = r.nama || kartuLama.nama;
+      kartuLama.kelas = r.kelas || kartuLama.kelas;
+      kartuLama.noInduk = r.noInduk || kartuLama.noInduk;
+      kartuLama.izin = r.izin || kartuLama.izin;
       kartuLama._warna = s0._warna;
       kartuLama._bunyi = s0._bunyi;
       kartuLama._judul = s0._judul;
