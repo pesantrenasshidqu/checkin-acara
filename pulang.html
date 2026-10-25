@@ -320,22 +320,24 @@
   }
 
   function pantau() {
-    api('pl_terakhir', { pin: pin })
+    api('pl_terakhir', { pin: pin, sesudah: idTampil === null ? undefined : idTampil })
       .then(function (r) {
         catatSambung(true);
-        if (r && r.id) {
+        if (r && r.items) {
           if (idTampil === null) {
-            idTampil = r.id;            // hasil lama saat halaman dibuka: tidak ditampilkan
-          } else if (r.id !== idTampil) {
-            idTampil = r.id;
-            tampil(r);
+            idTampil = r.items.length > 0 ? r.items[r.items.length - 1].id : '';
+          } else {
+            r.items.forEach(function (item) {
+              idTampil = item.id;
+              tampil(item);
+            });
           }
         } else if (idTampil === null) {
-          idTampil = 0;
+          idTampil = '';
         }
       })
       .catch(function () { catatSambung(false); })
-      .then(function () { setTimeout(pantau, 1500); });
+      .then(function () { setTimeout(pantau, 1000); });
   }
 
   // ---------- Mode scan ----------
@@ -727,6 +729,8 @@
   }
 
   function hapusSlot(s, tunda) {
+    // Jangan tutup paksa kalau masih diproses (langkah < 99), kecuali diminta tunda = 0 oleh tombol Batal
+    if (tunda !== 0 && s.langkah < 99) return;
     clearTimeout(s.timerId);
     function lakukan() {
       if (!s.el) return;
@@ -775,6 +779,7 @@
 
     // tombol X hanya di hasil akhir (class 'akhir' ditambah nanti)
     const xBtn = elT('button', 'x-s', '✕');
+    xBtn.style.display = 'none';
     xBtn.onclick = function () { hapusSlot(s, 0); };
     div.appendChild(xBtn);
 
@@ -826,6 +831,7 @@
 
     } else {
       // hasil akhir
+      xBtn.style.display = 'flex';
       div.classList.add('akhir');
       const w = s._warna || 'sudah-s';
       div.classList.add(w);
@@ -834,7 +840,7 @@
       const bar = elT('div', 'progres-s'); div.appendChild(bar);
       if (SUARA_LAYAR) bunyi({ status: s._bunyi || 'SUDAH_PULANG' });
       mulaiProgres(s);
-      hapusSlot(s, TUTUP_SLOT_MS);
+      hapusSlot(s, TUTUP_SLOT_MS);   // tutup otomatis hanya setelah hasil akhir
     }
 
     div.appendChild(kotak);
@@ -862,8 +868,12 @@
         s.langkah = 99; s.kirim = false; gambarSlot(s, false);
       })
       .catch(function (e) {
-        s.kirim = false; gambarSlot(s, false);
-        if (slots.indexOf(s) >= 0) alert('Gagal menyimpan ' + s.nama + ': ' + e.message + '. Coba lagi.');
+        s.kirim = false;
+        // Slot tetap terbuka agar petugas bisa coba lagi
+        if (slots.indexOf(s) >= 0) {
+          gambarSlot(s, false);
+          alert('Gagal menyimpan ' + s.nama + ': ' + e.message + '. Coba lagi.');
+        }
       });
   }
 
