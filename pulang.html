@@ -265,6 +265,53 @@
       *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
     }
 
+  
+
+    /* ===== STATUS LARANGAN: KONTRAS TINGGI =====
+       Mengalahkan latar hijau #layar agar status larangan selalu merah,
+       baik pada layar HP petugas maupun kartu multi-slot proyektor. */
+    #layar.palsu {
+      background: linear-gradient(145deg, #b91c1c 0%, #991b1b 56%, #7f1d1d 100%);
+      color: #fff;
+      border: 0;
+      box-shadow: inset 0 0 0 6px rgba(255,255,255,.14);
+    }
+    #layar.palsu .besar,
+    #layar.palsu .nama,
+    #layar.palsu .kecil {
+      color: #fff;
+      text-shadow: 0 2px 8px rgba(0,0,0,.22);
+    }
+    #layar.palsu .lencana.larang {
+      background: #fff;
+      color: #991b1b;
+      border: 2px solid #fff;
+    }
+    #layar.palsu .btn.utama {
+      background: #fff;
+      color: #991b1b;
+      border-color: #fff;
+    }
+    .slot.palsu-s {
+      background: linear-gradient(145deg, #b91c1c 0%, #991b1b 58%, #7f1d1d 100%);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.62);
+      box-shadow: 0 10px 26px rgba(127,29,29,.24);
+    }
+    .slot.palsu-s .lencana-s.larang {
+      background: #fff;
+      color: #991b1b;
+      border: 1px solid #fff;
+    }
+    .slot.palsu-s .tanya-s,
+    .slot.palsu-s .nama-s,
+    .slot.palsu-s .sub-s {
+      color: #fff;
+      text-shadow: 0 1px 5px rgba(0,0,0,.18);
+      opacity: 1;
+    }
+    .slot.palsu-s .progres-s { background: rgba(255,255,255,.92); }
+
   </style>
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
