@@ -57,11 +57,10 @@
     body.mode-layar h1 { font-size: 40px; }
     body.mode-layar #stat { font-size: 28px; }
     body.mode-layar .kotak { font-size: 28px; padding: 40px 12px; }
-    /* Video latar (YouTube) */
-    #videoLatar { position: fixed; top: 0; left: 0; right: 0; bottom: 0; overflow: hidden; z-index: -1; pointer-events: none; }
-    #videoLatar iframe { position: absolute; top: 50%; left: 50%; width: max(115vw, 204.5vh); height: max(64.7vw, 115vh);
-                         transform: translate(-50%, -50%); border: 0; }
-    #videoLatar .gelap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.4); }
+    /* Video latar MP4: hanya aktif pada mode layar, tidak diunduh oleh HP petugas */
+    #videoLatar { position: fixed; inset: 0; overflow: hidden; z-index: -1; pointer-events: none; background: #022c22; }
+    #videoLatar video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    #videoLatar .gelap { position: absolute; inset: 0; background: rgba(0,0,0,.38); }
     /* Popup status layar penuh */
     #layar { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100; display: none;
              flex-direction: column; align-items: center; justify-content: center; text-align: center;
@@ -117,7 +116,7 @@
   // Suara saat scan: true = hidup, false = mati
   const SUARA_HP = true;
   const SUARA_LAYAR = true;
-  const VIDEO_YOUTUBE_ID = 'hMriuK-WS2A'; // ID video YouTube untuk latar; kosongkan ('') jika tidak dipakai
+  const VIDEO_LATAR_MP4 = 'latar-kepulangan.mp4'; // unggah di folder yang sama dengan index.html dan pulang.html
   // ================================
 
   // Mode halaman (diatur lewat alamat web):
@@ -137,43 +136,36 @@
 
   document.getElementById('judul').textContent = NAMA_ACARA;
 
-  // Video latar: hanya di laptop/proyektor (mode layar), tidak di HP petugas
-  if (VIDEO_YOUTUBE_ID && MODE === 'layar') {
+  // Video latar MP4: dipasang hanya pada perangkat proyektor, tidak diunduh pada mode HP.
+  if (VIDEO_LATAR_MP4 && MODE === 'layar') {
     const wadah = document.createElement('div');
     wadah.id = 'videoLatar';
-    const tempat = document.createElement('div');
-    tempat.id = 'ytPemutar';
-    wadah.appendChild(tempat);
-    const g = document.createElement('div');
-    g.className = 'gelap';
-    wadah.appendChild(g);
+
+    const video = document.createElement('video');
+    video.autoplay = true;
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.preload = 'metadata';
+    video.setAttribute('aria-hidden', 'true');
+    video.disablePictureInPicture = true;
+
+    const sumber = document.createElement('source');
+    sumber.src = new URL(VIDEO_LATAR_MP4, ALAMAT_FOTO).href;
+    sumber.type = 'video/mp4';
+    video.appendChild(sumber);
+    wadah.appendChild(video);
+
+    const gelap = document.createElement('div');
+    gelap.className = 'gelap';
+    wadah.appendChild(gelap);
     document.body.appendChild(wadah);
 
-    // Pemutar YouTube dikendalikan lewat API supaya video diulang sendiri dan
-    // tidak pernah sampai ke layar "video lainnya" di akhir video
-    window.onYouTubeIframeAPIReady = function () {
-      const p = new YT.Player('ytPemutar', {
-        videoId: VIDEO_YOUTUBE_ID,
-        playerVars: { autoplay: 1, mute: 1, controls: 0, rel: 0, modestbranding: 1,
-                      playsinline: 1, disablekb: 1, iv_load_policy: 3, fs: 0 },
-        events: {
-          onReady: function (e) { e.target.mute(); e.target.playVideo(); },
-          onStateChange: function (e) {
-            if (e.data === YT.PlayerState.ENDED) { e.target.seekTo(0); e.target.playVideo(); }
-          }
-        }
-      });
-      setInterval(function () {
-        try {
-          const d = p.getDuration();
-          if (d > 0 && p.getCurrentTime() >= d - 1) { p.seekTo(0); p.playVideo(); }
-        } catch (err) {}
-      }, 500);
-    };
-    const skrip = document.createElement('script');
-    skrip.src = 'https://www.youtube.com/iframe_api';
-    document.head.appendChild(skrip);
+    // Browser biasanya mengizinkan autoplay video yang mute; abaikan jika autoplay diblokir.
+    const mulaiVideo = video.play();
+    if (mulaiVideo && typeof mulaiVideo.catch === 'function') mulaiVideo.catch(function () {});
   }
+
   if (MODE === 'layar') {
     document.body.classList.add('mode-layar');
     document.getElementById('reader').style.display = 'none';
