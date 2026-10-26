@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Kepulangan Santri</title>
+  <title>Kepulangan Santri — Emerald MP4</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body { font-family: Arial, sans-serif; margin: 0; background: #061b14 center / cover fixed no-repeat; color: #111; min-height: 100vh; }
@@ -59,11 +59,10 @@
     body.mode-layar h1 { font-size: 40px; }
     body.mode-layar #stat { font-size: 28px; }
     body.mode-layar .kotak { font-size: 28px; padding: 40px 12px; }
-    /* Video latar (YouTube) */
-    #videoLatar { position: fixed; top: 0; left: 0; right: 0; bottom: 0; overflow: hidden; z-index: -1; pointer-events: none; }
-    #videoLatar iframe { position: absolute; top: 50%; left: 50%; width: max(115vw, 204.5vh); height: max(64.7vw, 115vh);
-                         transform: translate(-50%, -50%); border: 0; }
-    #videoLatar .gelap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.4); }
+    /* Video latar MP4: hanya di mode proyektor, tanpa iframe/YouTube API */
+    #videoLatar { position: fixed; inset: 0; overflow: hidden; z-index: -1; pointer-events: none; background: #022c22; }
+    #videoLatar video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    #videoLatar .gelap { position: absolute; inset: 0; background: rgba(0,0,0,.38); }
     /* Popup status layar penuh */
     #layar { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100; display: none;
              flex-direction: column; align-items: center; justify-content: center; text-align: center;
@@ -354,7 +353,7 @@
   // Alamat web app Apps Script (hasil Deploy, berakhiran /exec). Sama dengan alamat di index.html
   const API_URL = 'https://script.google.com/macros/s/AKfycbynnIbA-TiK1ebj2BDSSoZBFqe8Lz7kITnDY7448gGt5_dc3qjHattle33yVgvQxGE/exec';
   const NAMA_ACARA = 'Kepulangan Santri';
-  const VIDEO_YOUTUBE_ID = 'hMriuK-WS2A';   // ID video YouTube untuk latar di layar laptop; kosongkan jika tidak dipakai
+  const VIDEO_LATAR_MP4 = 'latar-kepulangan.mp4'; // unggah file ini satu folder dengan pulang.html
   // Alamat folder situs ini (otomatis mengikuti alamat GitHub Pages Anda)
   const ALAMAT_FOTO = new URL('.', location.href).href;
   // Suara saat scan: true = hidup, false = mati
@@ -371,7 +370,7 @@
   //   ''      = scan dan tampil di satu perangkat
   //   'hp'    = HP petugas untuk scan dan menjawab pertanyaan
   //   'layar' = laptop/proyektor hanya menampilkan hasil dari HP
-  const MODE_URL = new URLSearchParams(location.search).get('mode');
+  const MODE_URL = (new URLSearchParams(location.search).get('mode') || '').toLowerCase();
   const MODE = (MODE_URL === 'hp' || MODE_URL === 'layar') ? MODE_URL : '';
 
   // Komunikasi ke Apps Script (dikirim sebagai teks biasa agar tidak diblokir CORS)
@@ -399,39 +398,35 @@
     document.getElementById('fotoBaris').style.display = 'none';
   }
 
-  // Video latar: hanya di laptop/proyektor (mode layar), tidak di HP petugas
-  if (VIDEO_YOUTUBE_ID && MODE === 'layar') {
+  // Video latar MP4: hanya di proyektor. Tidak dipakai oleh mode HP.
+  // Bila MP4 belum diunggah, wadah video dihapus dan latar hijau tetap terlihat.
+  if (VIDEO_LATAR_MP4 && MODE === 'layar') {
     const wadah = document.createElement('div');
     wadah.id = 'videoLatar';
-    const tempat = document.createElement('div');
-    tempat.id = 'ytPemutar';
-    wadah.appendChild(tempat);
-    const g = document.createElement('div');
-    g.className = 'gelap';
-    wadah.appendChild(g);
+
+    const video = document.createElement('video');
+    video.autoplay = true;
+    video.muted = true;       // diperlukan agar autoplay diizinkan browser
+    video.loop = true;
+    video.playsInline = true;
+    video.preload = 'metadata';
+    video.setAttribute('aria-hidden', 'true');
+
+    const sumber = document.createElement('source');
+    sumber.src = new URL(VIDEO_LATAR_MP4, ALAMAT_FOTO).href;
+    sumber.type = 'video/mp4';
+    video.appendChild(sumber);
+    wadah.appendChild(video);
+
+    const gelap = document.createElement('div');
+    gelap.className = 'gelap';
+    wadah.appendChild(gelap);
     document.body.appendChild(wadah);
-    window.onYouTubeIframeAPIReady = function () {
-      const p = new YT.Player('ytPemutar', {
-        videoId: VIDEO_YOUTUBE_ID,
-        playerVars: { autoplay: 1, mute: 1, controls: 0, rel: 0, modestbranding: 1,
-                      playsinline: 1, disablekb: 1, iv_load_policy: 3, fs: 0 },
-        events: {
-          onReady: function (e) { e.target.mute(); e.target.playVideo(); },
-          onStateChange: function (e) {
-            if (e.data === YT.PlayerState.ENDED) { e.target.seekTo(0); e.target.playVideo(); }
-          }
-        }
-      });
-      setInterval(function () {
-        try {
-          const d = p.getDuration();
-          if (d > 0 && p.getCurrentTime() >= d - 1) { p.seekTo(0); p.playVideo(); }
-        } catch (err) {}
-      }, 500);
-    };
-    const skrip = document.createElement('script');
-    skrip.src = 'https://www.youtube.com/iframe_api';
-    document.head.appendChild(skrip);
+
+    // Jika nama/path file salah, jangan biarkan layar tertutup overlay gelap.
+    video.addEventListener('error', function () { wadah.remove(); }, { once: true });
+    const mulai = video.play();
+    if (mulai && typeof mulai.catch === 'function') mulai.catch(function () {});
   }
 
   let pin = '';
