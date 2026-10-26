@@ -156,6 +156,115 @@
     #layar .btn:disabled { opacity: .45; cursor: default; }
     #layar input.ket { font-size: 20px; padding: 14px; width: 100%; box-sizing: border-box; border-radius: 10px;
                        border: 3px solid #fff; color: #111; }
+
+    /* ===== TEMA ISLAMI MODERN: EMERALD & WHITE (CSS ONLY) ===== */
+    :root {
+      color-scheme: light;
+      --emerald-950: #052e25;
+      --emerald-900: #064e3b;
+      --emerald-800: #065f46;
+      --emerald-700: #047857;
+      --emerald-600: #059669;
+      --emerald-100: #d1fae5;
+      --emerald-50: #ecfdf5;
+      --white: #ffffff;
+    }
+    body {
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      background-color: var(--emerald-950);
+      color: #12352c;
+      -webkit-font-smoothing: antialiased;
+    }
+    body:not(.berlatar) { background-image: radial-gradient(ellipse at top, #e9fff4 0%, #f7fffb 46%, #dff5e9 100%); }
+    .wrap { padding: 16px; }
+    h1 {
+      color: var(--emerald-950);
+      text-shadow: none;
+      font-weight: 800;
+      letter-spacing: -.035em;
+      line-height: 1.15;
+    }
+    #judul::before { content: "۞"; display: block; color: var(--emerald-600); font-size: 24px; line-height: 1.2; margin-bottom: 5px; }
+    #stat {
+      color: var(--emerald-800);
+      text-shadow: none;
+      font-size: 14px;
+      letter-spacing: .01em;
+    }
+    #login {
+      color: var(--emerald-900);
+      text-shadow: none;
+      background: rgba(255,255,255,.94);
+      border: 1px solid rgba(5,150,105,.18);
+      border-radius: 22px;
+      padding: 24px 18px;
+      box-shadow: 0 14px 40px rgba(6,78,59,.09);
+    }
+    #login input, input, .slot input.ket-s, #layar input.ket {
+      border: 1px solid #b7d9c9;
+      background: #fff;
+      color: #12352c;
+      outline: none;
+    }
+    input:focus { border-color: var(--emerald-600); box-shadow: 0 0 0 3px rgba(5,150,105,.13); }
+    button, .biru, .slot.biru-s {
+      background: var(--emerald-700);
+      color: #fff;
+    }
+    button { font-weight: 700; transition: background-color .15s ease, transform .15s ease; }
+    button:hover { background: var(--emerald-800); }
+    button:active { transform: translateY(1px); }
+    .baris { gap: 10px; }
+    .baris input, .baris button { min-height: 46px; box-sizing: border-box; }
+    #reader { border-radius: 18px; border: 3px solid #fff; box-shadow: 0 10px 28px rgba(6,78,59,.14); }
+    .kotak {
+      background: rgba(255,255,255,.97);
+      color: var(--emerald-950);
+      border: 1px solid rgba(5,150,105,.17);
+      border-radius: 20px;
+      box-shadow: 0 12px 32px rgba(6,78,59,.10);
+    }
+    .kotak .judul { color: var(--emerald-800); letter-spacing: -.02em; }
+    .kotak .nama { color: var(--emerald-950); line-height: 1.2; }
+    .valid, .slot.valid-s { background: linear-gradient(145deg, #059669, #047857 72%, #065f46); color: #fff; }
+    .sudah, .slot.sudah-s { background: #fef3c7; color: #78350f; }
+    .palsu, .slot.palsu-s { background: #fee2e2; color: #991b1b; }
+    .error { background: #e2e8f0; color: #334155; }
+    .lencana.vip { background: #fef3c7; color: #78350f; }
+    .lencana.wisuda { background: var(--emerald-800); color: #fff; }
+    .lencana.wisudavip { background: #fef3c7; color: #78350f; border-color: #d6a94f; }
+    #sambung { color: var(--emerald-800); text-shadow: none; }
+    #btnSuara { background: rgba(6,78,59,.88); border-color: rgba(255,255,255,.7); }
+
+    /* Layar proyektor: kontras tinggi dan mudah dibaca dari jauh */
+    body.mode-layar:not(.berlatar) { background: radial-gradient(ellipse at 50% 0%, #0f766e 0%, #064e3b 44%, #022c22 100%); }
+    body.mode-layar h1 { color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,.18); }
+    body.mode-layar #judul::before { color: #a7f3d0; }
+    body.mode-layar #stat { color: #d1fae5; }
+    body.mode-layar .kotak { background: rgba(255,255,255,.97); border-color: rgba(167,243,208,.7); }
+    #layar { background: radial-gradient(ellipse at 50% 0%, #0f766e 0%, #064e3b 48%, #022c22 100%); }
+    #layar .btn { border-color: rgba(255,255,255,.8); background: rgba(255,255,255,.12); }
+    #layar .btn.utama { background: #fff; color: var(--emerald-900); }
+    #arena { background: radial-gradient(ellipse at 50% 0%, #0f766e 0%, #064e3b 48%, #022c22 100%); }
+    .slot.valid-s { border: 1px solid rgba(209,250,229,.75); box-shadow: 0 12px 30px rgba(0,0,0,.18); }
+    .slot.valid-s .lencana-s { background: rgba(255,255,255,.18); }
+    .slot .aksi-s button.utama { color: var(--emerald-900); }
+    .slot .aksi-s button { border-color: rgba(255,255,255,.78); }
+
+    @media (max-width: 600px) {
+      .wrap { padding: 12px; }
+      h1 { font-size: 24px; margin: 10px 0 8px; }
+      #login { margin-top: 22px; padding: 22px 14px; border-radius: 18px; }
+      .kotak { padding: 22px 14px; border-radius: 18px; }
+      .kotak .judul { font-size: 20px; }
+      .kotak .nama { font-size: clamp(23px, 6vw, 30px); }
+      input, button { border-radius: 12px; }
+      #reader { border-radius: 16px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+    }
+
   </style>
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
