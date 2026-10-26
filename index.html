@@ -61,6 +61,35 @@
     #videoLatar { position: fixed; inset: 0; overflow: hidden; z-index: -1; pointer-events: none; background: #022c22; }
     #videoLatar video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     #videoLatar .gelap { position: absolute; inset: 0; background: rgba(0,0,0,.38); }
+    /* Jam & jadwal sholat — hanya ditampilkan pada mode proyektor */
+    #jamSholat { position: fixed; top: 14px; right: 16px; z-index: 40; width: min(285px, 27vw);
+                 box-sizing: border-box; padding: 13px 15px; color: #fff; text-align: left;
+                 border: 1px solid rgba(255,255,255,.4); border-radius: 16px;
+                 background: rgba(2,44,34,.76); box-shadow: 0 8px 28px rgba(0,0,0,.24);
+                 backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px);
+                 pointer-events: none; text-shadow: 0 1px 3px rgba(0,0,0,.4); }
+    #jamSholat .js-kicker { font-size: 10px; letter-spacing: .11em; font-weight: 800; opacity: .9; }
+    #jamSholat .js-jam { font-size: clamp(25px, 2.1vw, 34px); line-height: 1.15; font-weight: 800;
+                         letter-spacing: .04em; font-variant-numeric: tabular-nums; margin-top: 4px; }
+    #jamSholat .js-tanggal { font-size: 11px; opacity: .9; margin-top: 3px; }
+    #jamSholat .js-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
+                          margin-top: 10px; }
+    #jamSholat .js-waktu { display: flex; flex-direction: column; align-items: center; gap: 2px;
+                           padding: 6px 3px; border-radius: 8px; background: rgba(255,255,255,.13); }
+    #jamSholat .js-label { font-size: 10px; opacity: .83; }
+    #jamSholat .js-time { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    #jamSholat .js-catatan { margin-top: 8px; font-size: 9px; opacity: .78; text-align: center; }
+    @media (max-width: 1000px) {
+      #jamSholat { top: 8px; right: 8px; width: 190px; padding: 8px 10px; border-radius: 12px; }
+      #jamSholat .js-kicker { font-size: 8px; }
+      #jamSholat .js-jam { font-size: 22px; }
+      #jamSholat .js-tanggal { font-size: 9px; }
+      #jamSholat .js-grid { gap: 4px; margin-top: 6px; }
+      #jamSholat .js-waktu { padding: 5px 2px; }
+      #jamSholat .js-label { font-size: 8px; }
+      #jamSholat .js-time { font-size: 10px; }
+      #jamSholat .js-catatan { font-size: 7px; margin-top: 5px; }
+    }
     /* Popup status layar penuh */
     #layar { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100; display: none;
              flex-direction: column; align-items: center; justify-content: center; text-align: center;
@@ -172,6 +201,114 @@
     document.getElementById('manualBaris').style.display = 'none';
     document.getElementById('fotoBaris').style.display = 'none';
   }
+
+  // ===== Jam & waktu sholat lokal (tanpa API tambahan) =====
+  function pasangJamSholat() {
+    if (MODE !== 'layar' || document.getElementById('jamSholat')) return;
+
+    // Koordinat terdaftar untuk PKBM As-Shidqu, Desa Sampora, Cilimus, Kuningan.
+    const LINTANG = -6.8506;
+    const BUJUR = 108.5041;
+    const ZONA = 7; // WIB
+    const panel = document.createElement('aside');
+    panel.id = 'jamSholat';
+    panel.setAttribute('aria-label', 'Jam dan perkiraan waktu sholat Pesantren As-Shidqu');
+    panel.innerHTML =
+      '<div class="js-kicker">PESANTREN AS-SHIDQU · WIB</div>' +
+      '<div class="js-jam" id="jsJam">--:--:--</div>' +
+      '<div class="js-tanggal" id="jsTanggal"></div>' +
+      '<div class="js-grid" id="jsGrid"></div>' +
+      '<div class="js-catatan">Perkiraan lokal Sampora · Asar Syafi’i</div>';
+    document.body.appendChild(panel);
+
+    function rad(derajat) { return derajat * Math.PI / 180; }
+    function derajat(radian) { return radian * 180 / Math.PI; }
+    function normal(sudut) { return (sudut % 360 + 360) % 360; }
+    function menit(tepat) {
+      tepat = Math.round(tepat);
+      tepat = (tepat % 1440 + 1440) % 1440;
+      return String(Math.floor(tepat / 60)).padStart(2, '0') + ':' +
+             String(tepat % 60).padStart(2, '0');
+    }
+    function tanggalJakarta(now) {
+      const bagian = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit'
+      }).formatToParts(now);
+      const obj = {};
+      bagian.forEach(function (p) { if (p.type !== 'literal') obj[p.type] = p.value; });
+      return { year: Number(obj.year), month: Number(obj.month), day: Number(obj.day),
+               key: obj.year + '-' + obj.month + '-' + obj.day };
+    }
+    function hitung(jamTanggal) {
+      let y = jamTanggal.year, m = jamTanggal.month, d = jamTanggal.day;
+      if (m <= 2) { y -= 1; m += 12; }
+      const a = Math.floor(y / 100);
+      const b = 2 - a + Math.floor(a / 4);
+      const jd = Math.floor(365.25 * (y + 4716)) +
+                 Math.floor(30.6001 * (m + 1)) + d + b - 1524.5 - ZONA / 24;
+      const t = (jd - 2451545.0) / 36525;
+      const l0 = normal(280.46646 + t * (36000.76983 + 0.0003032 * t));
+      const anomali = normal(357.52911 + t * (35999.05029 - 0.0001537 * t));
+      const e = 0.016708634 - t * (0.000042037 + 0.0000001267 * t);
+      const koreksi = Math.sin(rad(anomali)) * (1.914602 - t * (0.004817 + 0.000014 * t)) +
+        Math.sin(rad(2 * anomali)) * (0.019993 - 0.000101 * t) +
+        Math.sin(rad(3 * anomali)) * 0.000289;
+      const omega = 125.04 - 1934.136 * t;
+      const bujurMatahari = l0 + koreksi - 0.00569 - 0.00478 * Math.sin(rad(omega));
+      const eps0 = 23 + (26 + (21.448 - t * (46.815 + t * (0.00059 - t * 0.001813))) / 60) / 60;
+      const eps = eps0 + 0.00256 * Math.cos(rad(omega));
+      const deklinasi = Math.asin(Math.sin(rad(eps)) * Math.sin(rad(bujurMatahari)));
+      const y2 = Math.pow(Math.tan(rad(eps) / 2), 2);
+      const eq = 4 * derajat(
+        y2 * Math.sin(2 * rad(l0)) -
+        2 * e * Math.sin(rad(anomali)) +
+        4 * e * y2 * Math.sin(rad(anomali)) * Math.cos(2 * rad(l0)) -
+        0.5 * y2 * y2 * Math.sin(4 * rad(l0)) -
+        1.25 * e * e * Math.sin(2 * rad(anomali))
+      );
+      const tengahHari = 720 - 4 * BUJUR - eq + ZONA * 60;
+      function sudutJam(tinggi) {
+        const v = (Math.sin(rad(tinggi)) - Math.sin(rad(LINTANG)) * Math.sin(deklinasi)) /
+                  (Math.cos(rad(LINTANG)) * Math.cos(deklinasi));
+        return derajat(Math.acos(Math.max(-1, Math.min(1, v))));
+      }
+      const tinggiAsar = derajat(Math.atan(1 / (1 + Math.tan(Math.abs(rad(LINTANG) - deklinasi)))));
+      return [
+        ['Subuh', menit(tengahHari - 4 * sudutJam(-20) + 2)],
+        ['Zuhur', menit(tengahHari + 1 + 2)],
+        ['Asar', menit(tengahHari + 4 * sudutJam(tinggiAsar) + 2)],
+        ['Magrib', menit(tengahHari + 4 * sudutJam(-0.833 - 0.0347 * Math.sqrt(365)) + 2)],
+        ['Isya', menit(tengahHari + 4 * sudutJam(-18) + 2)]
+      ];
+    }
+    let tanggalDihitung = '';
+    function perbarui() {
+      const now = new Date();
+      const local = tanggalJakarta(now);
+      document.getElementById('jsJam').textContent =
+        new Intl.DateTimeFormat('id-ID', {
+          timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit',
+          second: '2-digit', hourCycle: 'h23'
+        }).format(now).replace(/\./g, ':');
+      document.getElementById('jsTanggal').textContent =
+        new Intl.DateTimeFormat('id-ID', {
+          timeZone: 'Asia/Jakarta', weekday: 'long', day: 'numeric',
+          month: 'long', year: 'numeric'
+        }).format(now);
+      if (local.key !== tanggalDihitung) {
+        const jadwal = hitung(local);
+        document.getElementById('jsGrid').innerHTML = jadwal.map(function (x) {
+          return '<div class="js-waktu"><span class="js-label">' + x[0] +
+                 '</span><span class="js-time">' + x[1] + '</span></div>';
+        }).join('');
+        tanggalDihitung = local.key;
+      }
+    }
+    perbarui();
+    setInterval(perbarui, 1000);
+  }
+  if (MODE === 'layar') pasangJamSholat();
+
 
   let pin = '';
   let sibuk = false;
