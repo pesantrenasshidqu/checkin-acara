@@ -520,7 +520,7 @@
       '<div class="js-jam" id="jsJam">--:--:--</div>' +
       '<div class="js-tanggal" id="jsTanggal"></div>' +
       '<div class="js-grid" id="jsGrid"></div>' +
-      '<div class="js-catatan">Jadwal perkiraan · Asar Syafi’i</div>';
+      '<div class="js-catatan">Perkiraan lokal Sampora · Asar Syafi’i</div>';
     document.body.appendChild(panel);
 
     function rad(derajat) { return derajat * Math.PI / 180; }
@@ -547,7 +547,7 @@
       const a = Math.floor(y / 100);
       const b = 2 - a + Math.floor(a / 4);
       const jd = Math.floor(365.25 * (y + 4716)) +
-                 Math.floor(30.6001 * (m + 1)) + d + b - 1524.5 + (12 - ZONA) / 24;
+                 Math.floor(30.6001 * (m + 1)) + d + b - 1524.5 - ZONA / 24;
       const t = (jd - 2451545.0) / 36525;
       const l0 = normal(280.46646 + t * (36000.76983 + 0.0003032 * t));
       const anomali = normal(357.52911 + t * (35999.05029 - 0.0001537 * t));
@@ -576,11 +576,11 @@
       }
       const tinggiAsar = derajat(Math.atan(1 / (1 + Math.tan(Math.abs(rad(LINTANG) - deklinasi)))));
       return [
-        ['Subuh', menit(tengahHari - 4 * sudutJam(-20))],
-        ['Zuhur', menit(tengahHari + 1)],
-        ['Asar', menit(tengahHari + 4 * sudutJam(tinggiAsar))],
-        ['Magrib', menit(tengahHari + 4 * sudutJam(-0.833))],
-        ['Isya', menit(tengahHari + 4 * sudutJam(-18))]
+        ['Subuh', menit(tengahHari - 4 * sudutJam(-20) + 2)],
+        ['Zuhur', menit(tengahHari + 1 + 2)],
+        ['Asar', menit(tengahHari + 4 * sudutJam(tinggiAsar) + 2)],
+        ['Magrib', menit(tengahHari + 4 * sudutJam(-0.833 - 0.0347 * Math.sqrt(365)) + 2)],
+        ['Isya', menit(tengahHari + 4 * sudutJam(-18) + 2)]
       ];
     }
     let tanggalDihitung = '';
@@ -590,7 +590,7 @@
       document.getElementById('jsJam').textContent =
         new Intl.DateTimeFormat('id-ID', {
           timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit',
-          second: '2-digit', hour12: false
+          second: '2-digit', hourCycle: 'h23'
         }).format(now).replace(/\./g, ':');
       document.getElementById('jsTanggal').textContent =
         new Intl.DateTimeFormat('id-ID', {
