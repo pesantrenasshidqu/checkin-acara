@@ -57,10 +57,16 @@
     body.mode-layar h1 { font-size: 40px; }
     body.mode-layar #stat { font-size: 28px; }
     body.mode-layar .kotak { font-size: 28px; padding: 40px 12px; }
+    body.mode-layar.berlatar { background-image: none !important; background-color: #022c22 !important; }
     /* Video latar MP4: hanya aktif pada mode layar, tidak diunduh oleh HP petugas */
-    #videoLatar { position: fixed; inset: 0; overflow: hidden; z-index: -1; pointer-events: none; background: #022c22; }
+    #videoLatar { position: fixed; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; background: #022c22; }
     #videoLatar video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     #videoLatar .gelap { position: absolute; inset: 0; background: rgba(0,0,0,.38); }
+    .wrap { position: relative; z-index: 1; }
+    .logo-as-shidqu { display: block; width: 118px; max-width: 34vw; height: auto; margin: 8px auto 2px;
+                       object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,.55)); }
+    body.mode-layar .logo-as-shidqu { width: 148px; margin-top: 3px; margin-bottom: 0; }
+    @media (max-width: 520px) { .logo-as-shidqu { width: 94px; } }
     /* Jam & jadwal sholat — hanya ditampilkan pada mode proyektor */
     #jamSholat { position: fixed; top: 14px; right: 16px; z-index: 40; width: min(285px, 27vw);
                  box-sizing: border-box; padding: 13px 15px; color: #fff; text-align: left;
@@ -105,6 +111,7 @@
 </head>
 <body>
   <div class="wrap">
+    <img class="logo-as-shidqu" src="logo-masjid-as-shidqu-white.png" alt="Logo Masjid As-Shidqu" decoding="async">
     <h1 id="judul">Check-in Wali Santri</h1>
 
     <div id="login">
@@ -183,6 +190,7 @@
     sumber.src = new URL(VIDEO_LATAR_MP4, ALAMAT_FOTO).href;
     sumber.type = 'video/mp4';
     video.appendChild(sumber);
+    video.addEventListener('error', function () { wadah.style.display = 'none'; });
     wadah.appendChild(video);
 
     const gelap = document.createElement('div');
