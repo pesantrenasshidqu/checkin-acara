@@ -24,7 +24,7 @@ Jangan edit manual kolom F:J setelah menjalankan persiapan, kecuali memang sedan
 1. Buka spreadsheet konsultasi yang benar.
 2. Pilih **Extensions → Apps Script** agar project terikat ke spreadsheet konsultasi, bukan ke spreadsheet check-in lama.
 3. Ganti isi `Code.gs` dengan isi folder `apps-script/Code.gs`, lalu simpan.
-4. Pilih fungsi `siapkanKonsultasiSantri` lalu klik **Run** dan izinkan akses yang diminta. Fungsi ini menambahkan kolom F:I, menghasilkan kode unik tersembunyi di J, dan membuat rumus QR/link.
+4. Pilih fungsi `siapkanKonsultasiSantri` lalu klik **Run** dan izinkan akses yang diminta. Fungsi ini melewati baris judul non-data, memperbaiki kode QR rusak, membuat ulang rumus QR/link, dan menampilkan `Kode QR` di kolom J. Kode valid, status, dan waktu check-in dipertahankan.
 5. Muat ulang spreadsheet. Menu **Konsultasi Santri** akan muncul. Gunakan **Atur PIN petugas** untuk mengganti PIN bawaan `1234` sebelum kegiatan.
 6. Setelah mengganti kode Apps Script, pilih **Deploy → Manage deployments**, tekan ikon pensil pada deployment Web App yang sudah ada, pilih **New version**, lalu **Deploy**. Dengan cara ini URL `/exec` biasanya tetap sama; gunakan URL yang sama yang sudah dipasang di halaman GitHub. Pastikan **Execute as: Me** dan **Who has access: Anyone**.
 
