@@ -265,9 +265,24 @@
         return;
       }
       scanner = new Html5Qrcode('reader', konfigurasiQR());
-      scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 240, height: 240 } }, function(text) { proses(text); }, function() {})
-        .then(function() { document.getElementById('sambung').textContent = '● Kamera aktif'; })
-        .catch(function() { document.getElementById('sambung').textContent = 'Kamera tidak bisa dibuka. Pakai tombol scan foto atau input kode.'; });
+      const cfg = { fps: 10, qrbox: { width: 240, height: 240 } };
+      const sukses = function(text) { proses(text); };
+      const gagal = function() {
+        document.getElementById('sambung').textContent = 'Kamera tidak bisa dibuka. Pakai tombol scan foto atau input kode.';
+      };
+      // Pilih kamera fisik/back terlebih dahulu agar tidak salah memilih kamera virtual seperti EOS Webcam Utility bila webcam asli juga tersedia.
+      Html5Qrcode.getCameras().then(function(cameras) {
+        if (!cameras || !cameras.length) return scanner.start({ facingMode: 'environment' }, cfg, sukses, function() {});
+        const virtual = /eos webcam utility|obs virtual|virtual camera|snap camera/i;
+        const fisik = cameras.filter(function(c) { return !virtual.test(c.label || ''); });
+        const pilihan = fisik.length ? fisik : cameras;
+        const belakang = pilihan.find(function(c) { return /back|rear|environment|belakang/i.test(c.label || ''); });
+        const kamera = belakang || pilihan[0];
+        return scanner.start(kamera.id, cfg, sukses, function() {});
+      }).then(function() {
+        const status = document.getElementById('sambung');
+        status.textContent = '● Kamera aktif';
+      }).catch(gagal);
     }
     function bacaFoto(ev) {
       const file = ev.target.files && ev.target.files[0]; ev.target.value = '';
