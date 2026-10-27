@@ -35,7 +35,7 @@ Jangan isi manual kolom F:J setelah menjalankan persiapan, kecuali memang sedang
 3. Commit perubahan ke branch dan merge ke `main` setelah memeriksa perubahannya.
 4. Buka halaman GitHub Pages yang sama dengan sistem lama, lalu tambahkan `/konsultasi.html?mode=hp` untuk HP pemindai atau `/konsultasi.html?mode=layar` untuk proyektor.
 
-Video `latar-kepulangan.mp4` dan logo `logo-masjid-as-shidqu-white.png` memakai nama file yang sama dengan aset yang ada di root repositori.
+Video latar memakai aset `latar-kepulangan.mp4` yang ada di root repositori. Logo putih Masjid As-Shidqu sudah ditanam langsung di `konsultasi.html`, sehingga tidak membutuhkan file logo eksternal.
 
 ## Status hasil scan
 
