@@ -25,8 +25,9 @@ Jangan edit manual kolom F:J setelah menjalankan persiapan, kecuali memang sedan
 2. Pilih **Extensions → Apps Script** agar project terikat ke spreadsheet konsultasi, bukan ke spreadsheet check-in lama.
 3. Ganti isi `Code.gs` dengan isi folder `apps-script/Code.gs`, lalu simpan.
 4. Pilih fungsi `siapkanKonsultasiSantri` lalu klik **Run** dan izinkan akses yang diminta. Jika baris 2 berisi data santri sekaligus header F:J, fungsi akan menyisipkan baris header baru agar data pertama tidak tertimpa. Fungsi juga melewati baris judul non-data, memperbaiki kode QR rusak, membuat ulang rumus QR/link, dan menampilkan `Kode QR` di kolom J. Kode valid, status, dan waktu check-in dipertahankan.
-5. Muat ulang spreadsheet. Menu **Konsultasi Santri** akan muncul. Gunakan **Atur PIN petugas** untuk mengganti PIN bawaan `1234` sebelum kegiatan.
-6. Setelah mengganti kode Apps Script, pilih **Deploy → Manage deployments**, tekan ikon pensil pada deployment Web App yang sudah ada, pilih **New version**, lalu **Deploy**. Dengan cara ini URL `/exec` biasanya tetap sama; gunakan URL yang sama yang sudah dipasang di halaman GitHub. Pastikan **Execute as: Me** dan **Who has access: Anyone**.
+5. Muat ulang spreadsheet. Menu **Konsultasi Santri** akan muncul. Pilih **Cetak semua QR ke Google Docs** untuk membuat dokumen siap cetak; izinkan akses Docs/Drive dan koneksi internet saat diminta. Dokumen berisi 12 kartu per halaman (3 kolom × 4 baris), lengkap dengan QR, nama santri, kelas, dan kode unik. Jika memungkinkan dokumen disimpan di folder yang sama dengan spreadsheet; jika tidak, dokumen tetap tersedia di Drive Saya. Klik **Buka Google Docs**, lalu pilih **File → Print**.
+6. Gunakan **Atur PIN petugas** untuk mengganti PIN bawaan `1234` sebelum kegiatan.
+7. Setelah mengganti kode Apps Script, pilih **Deploy → Manage deployments**, tekan ikon pensil pada deployment Web App yang sudah ada, pilih **New version**, lalu **Deploy**. Dengan cara ini URL `/exec` biasanya tetap sama; gunakan URL yang sama yang sudah dipasang di halaman GitHub. Pastikan **Execute as: Me** dan **Who has access: Anyone**.
 
 ## B. Hubungkan halaman GitHub ke Apps Script
 
