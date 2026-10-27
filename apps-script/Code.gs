@@ -43,12 +43,14 @@ function siapkanKonsultasiSantri() {
   PropertiesService.getScriptProperties().setProperty(KS.SPREADSHEET_KEY, ss.getId());
   if (sh.getMaxColumns() < KS.COL_KODE) sh.insertColumnsAfter(sh.getMaxColumns(), KS.COL_KODE - sh.getMaxColumns());
 
+  // Jika baris 2 berisi santri, jangan menimpa kolom F:J pada baris yang sama dengan header.
+  // Sisipkan baris header baru agar data pertama tetap utuh.
+  ksPerbaikiHeaderBertabrakan_(sh);
+
   sh.getRange(KS.HEADER_ROW, KS.COL_STATUS, 1, 5)
     .setValues([['Status', 'Waktu Check-in', 'QR', 'Link QR', 'Kode QR']])
     .setBackground('#075E45').setFontColor('#FFFFFF').setFontWeight('bold')
     .setHorizontalAlignment('center').setVerticalAlignment('middle').setWrap(true);
-  sh.getRange(KS.SUBHEADER_ROW, KS.COL_STATUS, 1, 5).clearContent();
-
   const last = sh.getLastRow();
   const first = ksCariBarisDataPertama_(sh);
   sh.showColumns(KS.COL_KODE);
@@ -60,10 +62,12 @@ function siapkanKonsultasiSantri() {
   sh.setRowHeight(KS.HEADER_ROW, 32);
   sh.setRowHeight(KS.SUBHEADER_ROW, 22);
 
-  // Bersihkan kolom F:J dari baris judul/non-data sebelum santri pertama.
-  if (first > KS.DATA_START_ROW) {
-    sh.getRange(KS.DATA_START_ROW, KS.COL_STATUS, first - KS.DATA_START_ROW, 5).clearContent();
-    for (let rr = KS.DATA_START_ROW; rr < first; rr++) sh.setRowHeight(rr, 30);
+  // Bersihkan hanya kolom F:J pada baris subjudul di atas santri pertama.
+  // Jangan pernah membersihkan kolom status pada baris santri pertama.
+  const barisSetelahHeader = KS.HEADER_ROW + 1;
+  if (first > barisSetelahHeader) {
+    sh.getRange(barisSetelahHeader, KS.COL_STATUS, first - barisSetelahHeader, 5).clearContent();
+    for (let rr = barisSetelahHeader; rr < first; rr++) sh.setRowHeight(rr, 30);
   }
   if (first > last) {
     ss.toast('Kolom konsultasi disiapkan. Pastikan nama santri, ayah/ibu, dan kelas telah terisi.', 'Konsultasi Santri', 7);
@@ -209,11 +213,32 @@ function ksSimpanEvent_(result) {
   return result;
 }
 
+function ksPerbaikiHeaderBertabrakan_(sh) {
+  const calonSantri = sh.getRange(KS.HEADER_ROW, 1, 1, 5).getDisplayValues()[0];
+  if (!ksAdalahBarisSantri_(calonSantri)) return;
+
+  const nilaiFGHIJ = sh.getRange(KS.HEADER_ROW, KS.COL_STATUS, 1, 5).getDisplayValues()[0];
+  sh.insertRowBefore(KS.HEADER_ROW);
+  sh.getRange(KS.HEADER_ROW, 1, 1, KS.COL_KODE).breakApart();
+  // Header ditaruh di baris 2 yang baru; data pertama bergeser aman ke baris 3.
+  sh.getRange(KS.HEADER_ROW, KS.COL_STATUS, 1, 5)
+    .setValues([['Status', 'Waktu Check-in', 'QR', 'Link QR', 'Kode QR']]);
+
+  // Hilangkan hanya teks header yang sempat menimpa area F:J pada santri pertama.
+  const label = ['STATUS', 'WAKTU CHECK-IN', 'QR', 'LINK QR', 'KODE QR', 'KODE INTERNAL'];
+  nilaiFGHIJ.forEach((v, i) => {
+    if (label.indexOf(String(v || '').trim().toUpperCase()) >= 0) {
+      sh.getRange(KS.HEADER_ROW + 1, KS.COL_STATUS + i).clearContent();
+    }
+  });
+}
+
 function ksCariBarisDataPertama_(sh) {
   const last = sh.getLastRow();
-  if (last < KS.DATA_START_ROW) return last + 1;
-  const vals = sh.getRange(KS.DATA_START_ROW, 1, last - KS.DATA_START_ROW + 1, 5).getDisplayValues();
-  for (let i = 0; i < vals.length; i++) if (ksAdalahBarisSantri_(vals[i])) return KS.DATA_START_ROW + i;
+  const start = KS.HEADER_ROW; // Lewati judul di baris 1, tetapi izinkan data mulai baris 2 atau 3.
+  if (last < start) return last + 1;
+  const vals = sh.getRange(start, 1, last - start + 1, 5).getDisplayValues();
+  for (let i = 0; i < vals.length; i++) if (ksAdalahBarisSantri_(vals[i])) return start + i;
   return last + 1;
 }
 
