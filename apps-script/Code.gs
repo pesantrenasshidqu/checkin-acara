@@ -28,6 +28,7 @@ const KS = Object.freeze({
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('Konsultasi Santri')
     .addItem('1. Siapkan kolom, kode, dan QR', 'siapkanKonsultasiSantri')
+    .addItem('Cetak semua QR ke Google Docs', 'buatDokumenCetakQRSantri')
     .addItem('Atur PIN petugas', 'aturPinKonsultasiSantri')
     .addSeparator()
     .addItem('Reset status scan (sebelum acara)', 'resetKonsultasiSantri')
@@ -298,6 +299,151 @@ function aturPinKonsultasiSantri() {
   if (pin.length < 4) { ui.alert('PIN terlalu pendek. PIN tidak diubah.'); return; }
   PropertiesService.getScriptProperties().setProperty(KS.PIN_KEY, pin);
   ui.alert('PIN konsultasi tersimpan. Gunakan PIN ini di HP dan proyektor.');
+}
+
+/**
+ * Membuat Google Docs berisi semua QR aktif dalam kartu siap cetak.
+ * QR dibuat dari kode unik di kolom J; fungsi ini tidak mengubah status/waktu check-in.
+ */
+function buatDokumenCetakQRSantri() {
+  const ui = SpreadsheetApp.getUi();
+  const sh = ksSheet_();
+  const first = ksCariBarisDataPertama_(sh);
+  const last = sh.getLastRow();
+  if (first > last) {
+    ui.alert('Belum ada data santri', 'Tidak ditemukan baris data santri yang valid di Sheet1.', ui.ButtonSet.OK);
+    return;
+  }
+
+  const rows = sh.getRange(first, 1, last - first + 1, KS.COL_KODE).getDisplayValues();
+  const santri = [];
+  const seen = new Set();
+  rows.forEach(function(r, i) {
+    if (!ksAdalahBarisSantri_(r)) return;
+    const code = String(r[KS.COL_KODE - 1] || '').trim().toUpperCase();
+    if (!/^KS-[A-Z0-9]{12}$/.test(code)) {
+      throw new Error('Kode QR belum valid untuk "' + String(r[KS.COL_SANTRI - 1] || '').trim() +
+        '" pada baris ' + (first + i) + '. Jalankan Konsultasi Santri → Siapkan kolom, kode, dan QR terlebih dahulu.');
+    }
+    if (seen.has(code)) throw new Error('Kode QR ganda ditemukan: ' + code + '. Perbaiki duplikasi sebelum mencetak.');
+    seen.add(code);
+    santri.push({
+      nama: String(r[KS.COL_SANTRI - 1] || '').trim(),
+      kelas: String(r[KS.COL_KELAS - 1] || '').trim(),
+      kode: code
+    });
+  });
+
+  if (!santri.length) {
+    ui.alert('Belum ada data santri', 'Tidak ada baris santri yang dapat dicetak.', ui.ButtonSet.OK);
+    return;
+  }
+
+  // Ambil gambar QR dalam batch agar pembuatan dokumen puluhan/ratusan QR lebih cepat.
+  const blobs = [];
+  const BATCH = 18;
+  for (let start = 0; start < santri.length; start += BATCH) {
+    const batch = santri.slice(start, start + BATCH);
+    const requests = batch.map(function(s) {
+      return { url: KS.QR_BASE + encodeURIComponent(s.kode), muteHttpExceptions: true };
+    });
+    let responses;
+    try {
+      responses = UrlFetchApp.fetchAll(requests);
+    } catch (err) {
+      throw new Error('Gagal mengambil gambar QR dari layanan QR. Periksa koneksi internet, lalu coba lagi. Detail: ' + err.message);
+    }
+    responses.forEach(function(response, j) {
+      if (response.getResponseCode() !== 200 || !/^image\//i.test(String(response.getHeaders()['Content-Type'] || ''))) {
+        throw new Error('Gambar QR gagal dibuat untuk kode ' + batch[j].kode + '. Periksa koneksi internet atau layanan QR, lalu coba lagi.');
+      }
+      blobs.push(response.getBlob().setName('QR-' + batch[j].kode + '.png'));
+    });
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const tanggal = Utilities.formatDate(new Date(), 'Asia/Jakarta', 'dd-MM-yyyy HH.mm');
+  const doc = DocumentApp.create('QR Konsultasi Santri - ' + tanggal);
+  const body = doc.getBody();
+  body.setMarginTop(24).setMarginBottom(24).setMarginLeft(24).setMarginRight(24);
+
+  const PER_HALAMAN = 12; // 3 kolom x 4 baris
+  for (let pageStart = 0; pageStart < santri.length; pageStart += PER_HALAMAN) {
+    if (pageStart > 0) body.appendPageBreak();
+
+    const pJudul = body.appendParagraph('CHECKIN KONSULTASI SANTRI');
+    pJudul.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+    pJudul.setSpacingBefore(0).setSpacingAfter(2);
+    pJudul.editAsText().setFontFamily('Arial').setFontSize(15).setBold(true).setForegroundColor('#075E45');
+
+    const pInfo = body.appendParagraph('Kartu QR santri • ' + santri.length + ' santri • ' + tanggal);
+    pInfo.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+    pInfo.setSpacingBefore(0).setSpacingAfter(8);
+    pInfo.editAsText().setFontFamily('Arial').setFontSize(8).setForegroundColor('#475569');
+
+    const slots = [];
+    for (let rr = 0; rr < 4; rr++) slots.push(['', '', '']);
+    const table = body.appendTable(slots);
+    table.setBorderWidth(0.75);
+    table.setBorderColor('#CBD5E1');
+
+    for (let offset = 0; offset < PER_HALAMAN; offset++) {
+      const pos = pageStart + offset;
+      if (pos >= santri.length) break;
+      const rowIndex = Math.floor(offset / 3);
+      const colIndex = offset % 3;
+      const cell = table.getCell(rowIndex, colIndex);
+      cell.clear();
+      cell.setBackgroundColor('#FFFFFF')
+        .setVerticalAlignment(DocumentApp.VerticalAlignment.MIDDLE)
+        .setPaddingTop(5).setPaddingBottom(5)
+        .setPaddingLeft(4).setPaddingRight(4);
+
+      const pQr = cell.appendParagraph('');
+      pQr.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      pQr.setSpacingBefore(0).setSpacingAfter(2);
+      const image = pQr.appendInlineImage(blobs[pos]);
+      image.setWidth(72).setHeight(72);
+
+      const pNama = cell.appendParagraph(santri[pos].nama);
+      pNama.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      pNama.setSpacingBefore(0).setSpacingAfter(1);
+      pNama.editAsText().setFontFamily('Arial').setFontSize(8).setBold(true).setForegroundColor('#0F172A');
+
+      const pKelas = cell.appendParagraph(santri[pos].kelas || 'Kelas —');
+      pKelas.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      pKelas.setSpacingBefore(0).setSpacingAfter(1);
+      pKelas.editAsText().setFontFamily('Arial').setFontSize(7).setForegroundColor('#475569');
+
+      const pKode = cell.appendParagraph(santri[pos].kode);
+      pKode.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      pKode.setSpacingBefore(0).setSpacingAfter(0);
+      pKode.editAsText().setFontFamily('Courier New').setFontSize(7).setBold(true).setForegroundColor('#075E45');
+    }
+  }
+
+  doc.saveAndClose();
+
+  // Letakkan dokumen di folder yang sama dengan spreadsheet, bila tersedia.
+  try {
+    const sourceFile = DriveApp.getFileById(ss.getId());
+    const parents = sourceFile.getParents();
+    if (parents.hasNext()) DriveApp.getFileById(doc.getId()).moveTo(parents.next());
+  } catch (e) {
+    // Jika Drive tidak mengizinkan pemindahan folder, dokumen tetap tersimpan di Drive Saya.
+  }
+
+  const url = doc.getUrl();
+  const html = HtmlService.createHtmlOutput(
+    '<div style="font:14px Arial,sans-serif;padding:20px;color:#0f172a">' +
+      '<div style="font-size:20px;font-weight:700;color:#075e45;margin-bottom:8px">Dokumen QR siap dicetak</div>' +
+      '<p>Berhasil membuat kartu QR untuk <b>' + santri.length + ' santri</b>.</p>' +
+      '<p>Layout: 3 kolom × 4 baris per halaman. Buka dokumen, lalu pilih <b>File → Print</b>.</p>' +
+      '<p><a style="display:inline-block;background:#087b52;color:white;padding:11px 16px;border-radius:8px;text-decoration:none;font-weight:700" target="_blank" rel="noopener" href="' + url + '">Buka Google Docs</a></p>' +
+      '<p style="font-size:12px;color:#64748b">QR bersumber dari kode unik di kolom J. Status dan waktu scan tidak diubah.</p>' +
+    '</div>'
+  ).setWidth(420).setHeight(220);
+  ui.showModalDialog(html, 'Kartu QR siap dicetak');
 }
 
 function resetKonsultasiSantri() {
