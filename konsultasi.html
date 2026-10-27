@@ -27,13 +27,65 @@
     #app[hidden],#login[hidden] { display:none !important; }
     #app { margin:0 auto; }
     #reader { width:min(500px,100%); margin:14px auto 0; overflow:hidden; border-radius:14px; background:#000; }
-    .kotak { width:min(860px,100%); margin:14px auto 0; padding:clamp(18px,3vw,34px); border-radius:18px; border:1px solid rgba(255,255,255,.6); background:rgba(255,255,255,.96); color:#073b2e; text-align:center; box-shadow:0 12px 30px rgba(0,0,0,.15); font-size:clamp(18px,2.2vw,28px); }
+    .kotak { width:min(930px,100%); margin:14px auto 0; padding:clamp(20px,3vw,38px); border-radius:24px; border:1px solid rgba(255,255,255,.68); background:rgba(255,255,255,.96); color:#073b2e; text-align:center; box-shadow:0 18px 45px rgba(0,0,0,.2); font-size:clamp(18px,2.2vw,28px); }
     .kotak .judul { font-size:clamp(24px,3.4vw,38px); font-weight:900; margin-bottom:10px; }
-    .kotak .rincian { margin:8px 0; font-size:clamp(17px,2vw,25px); line-height:1.35; overflow-wrap:anywhere; }
-    .kotak .cta { margin-top:18px; font-size:clamp(27px,3.5vw,44px); font-weight:1000; }
-    .kotak.valid { color:#fff; background:#087b52; border-color:rgba(255,255,255,.7); }
-    .kotak.sudah { color:#fff; background:#b98500; border-color:#fff0b3; }
-    .kotak.palsu,.kotak.error { color:#fff; background:#ad1e1e; border-color:#ffd5d5; }
+    .kotak.valid { color:#fff; background:linear-gradient(145deg,#079b6a 0%,#087b52 56%,#075c43 100%); border-color:rgba(255,255,255,.7); }
+    .kotak.sudah { color:#fff; background:linear-gradient(145deg,#d4a400 0%,#ae7b00 58%,#825a00 100%); border-color:#fff0b3; }
+    .kotak.palsu,.kotak.error { color:#fff; background:linear-gradient(145deg,#c52222 0%,#a71919 58%,#7f1717 100%); border-color:#ffd5d5; }
+    .hasil-hero { display:flex; align-items:center; justify-content:center; gap:clamp(14px,2vw,28px); width:min(1060px,100%); margin:0 auto 18px; text-align:left; }
+    .hero-icon { display:flex; align-items:center; justify-content:center; flex:0 0 clamp(66px,7vw,104px); width:clamp(66px,7vw,104px); height:clamp(66px,7vw,104px); border:1px solid rgba(255,255,255,.72); border-radius:28px; background:rgba(255,255,255,.14); box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 12px 26px rgba(0,0,0,.12); font-size:clamp(38px,4.3vw,66px); font-weight:900; line-height:1; }
+    .hero-copy { min-width:0; }
+    .hero-eyebrow { margin-bottom:7px; font-size:clamp(10px,1vw,15px); font-weight:900; letter-spacing:.16em; text-transform:uppercase; opacity:.82; }
+    .hero-title { font-size:clamp(28px,4vw,62px); font-weight:1000; line-height:1.02; letter-spacing:-.025em; text-wrap:balance; }
+    .hero-subtitle { margin-top:8px; font-size:clamp(14px,1.45vw,22px); opacity:.88; }
+    .lencana { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:7px 17px; border:1px solid rgba(255,255,255,.62); border-radius:999px; background:rgba(255,255,255,.14); font-size:clamp(13px,1.25vw,19px); font-weight:900; letter-spacing:.075em; }
+    .rincian, .rincian-layar { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:clamp(8px,1.05vw,14px); width:min(1120px,100%); margin:18px auto 0; text-align:left; line-height:1.25; }
+    .rincian > div, .rincian-layar > div { position:relative; display:flex; flex-direction:column; justify-content:center; gap:7px; min-width:0; min-height:clamp(76px,8vw,112px); padding:clamp(13px,1.45vw,21px) clamp(15px,1.6vw,24px); overflow-wrap:anywhere; border:1px solid rgba(255,255,255,.24); border-radius:17px; border-left:4px solid rgba(255,255,255,.72); background:linear-gradient(135deg,rgba(0,0,0,.14),rgba(255,255,255,.08)); box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 5px 16px rgba(0,0,0,.06); }
+    .rincian > div:nth-child(3), .rincian-layar > div:nth-child(3) { grid-column:1 / -1; }
+    .rincian strong, .rincian-layar strong { display:block; color:rgba(255,255,255,.75); font-size:clamp(10px,.95vw,15px); font-weight:900; letter-spacing:.12em; text-transform:uppercase; }
+    .rincian span, .rincian-layar span { display:block; color:#fff; font-size:clamp(17px,2vw,30px); font-weight:750; line-height:1.2; }
+    .rincian > div:nth-child(3) span, .rincian-layar > div:nth-child(3) span { font-size:clamp(20px,2.45vw,36px); }
+    .cta, .cta-layar { display:flex; align-items:center; justify-content:center; gap:12px; width:min(900px,100%); margin:clamp(16px,2vw,26px) auto 0; padding:clamp(14px,1.8vw,24px); border:1px solid rgba(255,255,255,.55); border-radius:18px; background:rgba(255,255,255,.13); box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 10px 22px rgba(0,0,0,.08); font-size:clamp(24px,3.4vw,52px); font-weight:1000; line-height:1.05; letter-spacing:.035em; }
+    .cta::before, .cta-layar::before { content:'✓'; display:flex; align-items:center; justify-content:center; width:1.15em; height:1.15em; flex:0 0 1.15em; border:2px solid rgba(255,255,255,.72); border-radius:50%; font-size:.62em; }
+    .sub-layar { margin:12px auto 0; font-size:clamp(14px,1.45vw,22px); opacity:.9; }
+    .waktu-chip { display:inline-flex; align-items:center; justify-content:center; gap:10px; margin:18px auto 0; padding:12px 19px; border:1px solid rgba(255,255,255,.35); border-radius:14px; background:rgba(0,0,0,.13); font-size:clamp(14px,1.45vw,22px); font-weight:750; }
+    .waktu-chip::before { content:'◷'; font-size:1.35em; }
+    .kode-ditolak { display:flex; flex-direction:column; align-items:center; gap:7px; width:min(650px,94%); margin:18px auto 0; padding:clamp(17px,2vw,28px); border:1px solid rgba(255,255,255,.42); border-radius:18px; background:rgba(0,0,0,.16); box-shadow:0 10px 30px rgba(0,0,0,.15); }
+    .kode-ditolak span { font-size:clamp(12px,1.2vw,18px); font-weight:900; letter-spacing:.12em; text-transform:uppercase; opacity:.82; }
+    .kode-ditolak strong { display:block; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:clamp(22px,3vw,44px); letter-spacing:.04em; overflow-wrap:anywhere; }
+    .rincian-layar { font-size:clamp(17px,2vw,28px); }
+    .rincian-layar > div { min-height:clamp(82px,8.5vw,118px); border-radius:18px; }
+    .rincian-layar strong { font-size:clamp(11px,1vw,16px); }
+    .rincian-layar span { font-size:clamp(19px,2.15vw,34px); }
+    #layar.valid .hero-icon { background:rgba(255,255,255,.18); }
+    #layar.sudah .hero-icon { color:#fff4c4; background:rgba(255,247,204,.16); }
+    #layar.palsu .hero-icon, #layar.error .hero-icon { background:rgba(255,255,255,.12); }
+    #layar .status-meta { margin-top:16px; font-size:clamp(12px,1vw,16px); font-weight:800; letter-spacing:.1em; opacity:.82; text-transform:uppercase; }
+    @media(max-width:900px) {
+      #layar { padding:24px; }
+      .hasil-hero { margin-bottom:14px; }
+      .rincian-layar { gap:8px; }
+      .rincian-layar > div { min-height:76px; padding:12px 15px; }
+    }
+    @media(max-width:600px) {
+      .hasil-hero { gap:12px; }
+      .hero-icon { flex-basis:58px; width:58px; height:58px; border-radius:18px; font-size:32px; }
+      .hero-title { font-size:26px; }
+      .hero-eyebrow { font-size:9px; letter-spacing:.12em; }
+      .hero-subtitle { font-size:12px; }
+      .kotak .rincian { grid-template-columns:1fr; }
+      .kotak .rincian > div { min-height:64px; }
+      .kotak .rincian > div:nth-child(3) { grid-column:auto; }
+      #layar { padding:54px 15px 20px; }
+      #layar .hasil-hero { align-items:flex-start; justify-content:flex-start; text-align:left; }
+      #layar .hero-title { font-size:clamp(23px,6vw,30px); }
+      #layar .rincian-layar { grid-template-columns:1fr; }
+      #layar .rincian-layar > div:nth-child(3) { grid-column:auto; }
+      #layar .rincian-layar > div { min-height:65px; border-radius:13px; }
+      #layar .rincian-layar span { font-size:clamp(17px,4.2vw,22px); }
+      #layar .cta-layar { font-size:24px; padding:14px 9px; }
+      #layar .waktu-chip { font-size:13px; padding:10px 13px; }
+    }
     #sambung { margin:10px auto 0; color:#fff; text-shadow:0 1px 5px #000; font-size:13px; opacity:1; }
     .petunjuk { margin:12px auto 0; max-width:620px; font-size:13px; opacity:.92; color:#fff; text-shadow:0 1px 4px #000; }
     #btnSuara { position:fixed; top:10px; left:10px; z-index:30; width:44px; height:44px; padding:0; border-radius:50%; background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.55); font-size:20px; }
@@ -153,30 +205,38 @@
     }
     function rincianHTML(r, besar) {
       const c = besar ? 'rincian-layar' : 'rincian';
+      function item(label, value, extra) {
+        return '<div' + (extra ? ' class="' + extra + '"' : '') + '><strong>' + label + '</strong><span>' + esc(value) + '</span></div>';
+      }
       return '<div class="' + c + '">' +
-        '<div><strong>Bpk:</strong> ' + esc(r.ayah) + '</div>' +
-        '<div><strong>Ibu:</strong> ' + esc(r.ibu) + '</div>' +
-        '<div><strong>Wali santri dari:</strong> ' + esc(r.santri) + '</div>' +
-        '<div><strong>Alamat:</strong> ' + esc(r.alamat) + '</div>' +
-        '<div><strong>Kelas:</strong> ' + esc(r.kelas) + '</div>' +
+        item('Bpk', r.ayah, 'item-ayah') +
+        item('Ibu', r.ibu, 'item-ibu') +
+        item('Wali santri dari', r.santri, 'item-santri') +
+        item('Alamat', r.alamat, 'item-alamat') +
+        item('Kelas', r.kelas, 'item-kelas') +
         '</div>';
     }
+    function headerHasil(icon, title, subtitle) {
+      return '<div class="hasil-hero"><div class="hero-icon" aria-hidden="true">' + icon + '</div><div class="hero-copy">' +
+        '<div class="hero-eyebrow">CHECKIN KONSULTASI SANTRI</div><div class="hero-title">' + title + '</div>' +
+        '<div class="hero-subtitle">' + subtitle + '</div></div></div>';
+    }
     function kontenHasil(r, besar) {
-      const css = kelasStatus(r);
       if (r.status === 'VALID') {
-        return '<div class="lencana">✓ BOLEH MASUK</div>' + rincianHTML(r, besar) + '<div class="' + (besar ? 'cta-layar' : 'cta') + '">SILAHKAN MASUK</div>';
+        return headerHasil('✓', 'BOLEH MASUK', 'Identitas wali dan santri berhasil diverifikasi.') +
+          rincianHTML(r, besar) + '<div class="' + (besar ? 'cta-layar' : 'cta') + '">SILAHKAN MASUK</div>';
       }
       if (r.status === 'SUDAH') {
-        return '<div class="lencana">SUDAH DISCAN/DIPAKAI</div><div class="headline">QR SUDAH DIGUNAKAN</div>' + rincianHTML(r, besar) + '<div class="sub-layar">Waktu check-in pertama: ' + esc(r.waktu || '—') + '</div>';
+        return headerHasil('↻', 'QR SUDAH DIGUNAKAN', 'Status kunjungan ini sudah tercatat sebelumnya.') +
+          '<div class="lencana">SUDAH DISCAN / DIPAKAI</div>' + rincianHTML(r, besar) +
+          '<div class="waktu-chip">Check-in pertama: ' + esc(r.waktu || '—') + '</div>';
       }
       if (r.status === 'PALSU') {
-        return '<div class="lencana">⚠ PERLU PEMERIKSAAN</div>' +
-          '<div class="headline">✕ QR TIDAK TERDAFTAR</div>' +
-          '<div class="sub-layar">Kode ini tidak ditemukan dalam daftar konsultasi santri.</div>' +
+        return headerHasil('!', 'QR TIDAK TERDAFTAR', 'Kode tidak ditemukan pada daftar konsultasi santri.') +
           (r.kode ? '<div class="kode-ditolak"><span>Kode QR yang terbaca</span><strong>' + esc(r.kode) + '</strong></div>' : '') +
-          '<div class="cta-layar">MOHON PERIKSA QR SANTRI</div>';
+          '<div class="sub-layar status-meta">MOHON PERIKSA QR SANTRI · JANGAN LEWATKAN VERIFIKASI</div>';
       }
-      return '<div class="headline">' + esc(r.pesan || 'Terjadi kesalahan') + '</div>';
+      return headerHasil('×', 'TERJADI GANGGUAN', esc(r.pesan || 'Periksa koneksi dan coba lagi.'));
     }
     function tampilHP(r) {
       const el = document.getElementById('hasil');
