@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#063c2d">
+  <title>Checkin Konsultasi Santri</title>
+  <style>
+    :root { color-scheme: dark; --hijau:#087b52; --hijau-tua:#064e3b; --putih:#fff; --kuning:#b98500; --merah:#ad1e1e; }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; font-family:Arial,Helvetica,sans-serif; background:#052b20; color:#fff; overflow-x:hidden; }
+    body.mode-layar { background:#022c22; }
+    #videoLatar { position:fixed; inset:0; z-index:0; overflow:hidden; background:#022c22; pointer-events:none; }
+    #videoLatar video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+    #videoLatar .gelap { position:absolute; inset:0; background:rgba(0,0,0,.48); }
+    .wrap { position:relative; z-index:1; width:min(980px,100%); margin:0 auto; padding:12px 18px 24px; text-align:center; }
+    .logo { display:block; width:clamp(100px,12vw,155px); max-height:115px; object-fit:contain; margin:0 auto 3px; filter:drop-shadow(0 2px 5px rgba(0,0,0,.5)); }
+    h1 { margin:4px 0 8px; font-size:clamp(27px,3vw,42px); color:#fff; font-weight:900; text-shadow:0 2px 8px rgba(0,0,0,.65); }
+    #stat { margin:0 auto 14px; font-size:clamp(16px,2vw,24px); font-weight:800; color:#d1fae5; text-shadow:0 2px 6px rgba(0,0,0,.7); }
+    #login { width:min(500px,100%); margin:22px auto 0; padding:20px; border:1px solid rgba(255,255,255,.28); border-radius:16px; background:rgba(3,35,26,.82); box-shadow:0 12px 30px rgba(0,0,0,.18); }
+    #login p { margin:0 0 12px; font-size:18px; font-weight:700; }
+    .baris { display:flex; gap:8px; margin-top:10px; }
+    input,button { min-width:0; border:1px solid rgba(255,255,255,.25); border-radius:9px; padding:12px 13px; font:inherit; }
+    input { flex:1; background:#fff; color:#111827; }
+    button { cursor:pointer; background:#087b52; color:#fff; border:0; font-weight:800; }
+    button:focus-visible,input:focus-visible { outline:3px solid #facc15; outline-offset:2px; }
+    #app[hidden],#login[hidden] { display:none !important; }
+    #app { margin:0 auto; }
+    #reader { width:min(500px,100%); margin:14px auto 0; overflow:hidden; border-radius:14px; background:#000; }
+    .kotak { width:min(860px,100%); margin:14px auto 0; padding:clamp(18px,3vw,34px); border-radius:18px; border:1px solid rgba(255,255,255,.6); background:rgba(255,255,255,.96); color:#073b2e; text-align:center; box-shadow:0 12px 30px rgba(0,0,0,.15); font-size:clamp(18px,2.2vw,28px); }
+    .kotak .judul { font-size:clamp(24px,3.4vw,38px); font-weight:900; margin-bottom:10px; }
+    .kotak .rincian { margin:8px 0; font-size:clamp(17px,2vw,25px); line-height:1.35; overflow-wrap:anywhere; }
+    .kotak .cta { margin-top:18px; font-size:clamp(27px,3.5vw,44px); font-weight:1000; }
+    .kotak.valid { color:#fff; background:#087b52; border-color:rgba(255,255,255,.7); }
+    .kotak.sudah { color:#fff; background:#b98500; border-color:#fff0b3; }
+    .kotak.palsu,.kotak.error { color:#fff; background:#ad1e1e; border-color:#ffd5d5; }
+    #sambung { margin:10px auto 0; color:#fff; text-shadow:0 1px 5px #000; font-size:13px; opacity:1; }
+    .petunjuk { margin:12px auto 0; max-width:620px; font-size:13px; opacity:.92; color:#fff; text-shadow:0 1px 4px #000; }
+    #btnSuara { position:fixed; top:10px; left:10px; z-index:30; width:44px; height:44px; padding:0; border-radius:50%; background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.55); font-size:20px; }
+    #layar { position:fixed; inset:4px; z-index:100; display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; overflow:auto; padding:clamp(22px,4vw,52px); border:1px solid rgba(255,255,255,.7); border-radius:16px; color:#fff; text-shadow:0 2px 5px rgba(0,0,0,.16); }
+    #layar.aktif { display:flex; }
+    #layar.valid { background:linear-gradient(145deg,#079b6a 0%,#087b52 54%,#075c43 100%); }
+    #layar.sudah { background:linear-gradient(145deg,#d4a400 0%,#ae7b00 58%,#825a00 100%); }
+    #layar.palsu,#layar.error { background:linear-gradient(145deg,#c52222 0%,#a71919 58%,#7f1717 100%); }
+    .tutup { position:absolute; top:12px; right:12px; width:42px; height:42px; border-radius:50%; border:1px solid rgba(255,255,255,.85); background:rgba(0,0,0,.12); padding:0; font-size:26px; }
+    .lencana { display:inline-block; padding:7px 18px; border:1px solid rgba(255,255,255,.65); border-radius:999px; background:rgba(255,255,255,.14); font-size:clamp(17px,2.3vw,30px); font-weight:900; letter-spacing:.035em; }
+    .headline { margin:14px 0 10px; font-size:clamp(29px,4vw,56px); line-height:1.08; font-weight:1000; }
+    .rincian-layar { display:grid; gap:10px; width:min(1180px,100%); margin:8px auto; text-align:left; font-size:clamp(18px,2.6vw,34px); line-height:1.25; }
+    .rincian-layar div { border-radius:9px; padding:5px 12px; background:rgba(0,0,0,.09); overflow-wrap:anywhere; }
+    .rincian-layar strong { font-weight:900; }
+    .cta-layar { margin-top:12px; font-size:clamp(34px,4.5vw,68px); line-height:1.08; font-weight:1000; }
+    .sub-layar { margin-top:12px; font-size:clamp(16px,1.8vw,25px); }
+    /* Jam dan perkiraan waktu salat; tidak memakai API tambahan */
+    #jamSholat { position:fixed; top:12px; right:14px; z-index:25; width:min(275px,26vw); padding:12px 14px; border:1px solid rgba(255,255,255,.45); border-radius:15px; color:#fff; background:rgba(2,44,34,.76); box-shadow:0 8px 26px rgba(0,0,0,.2); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); text-align:left; text-shadow:0 1px 3px rgba(0,0,0,.4); pointer-events:none; }
+    .js-kicker { font-size:10px; font-weight:800; letter-spacing:.1em; }
+    .js-jam { margin-top:4px; font-size:clamp(24px,2.1vw,34px); font-weight:900; font-variant-numeric:tabular-nums; }
+    .js-tanggal { font-size:11px; margin-top:3px; }
+    .js-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; margin-top:9px; }
+    .js-waktu { display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 2px; border-radius:7px; background:rgba(255,255,255,.13); }
+    .js-label { font-size:9px; opacity:.86; }
+    .js-time { font-size:12px; font-weight:900; font-variant-numeric:tabular-nums; }
+    .js-catatan { margin-top:7px; font-size:8px; text-align:center; opacity:.8; }
+    body.mode-layar .wrap { max-width:1050px; padding-top:10px; }
+    body.mode-layar .logo { width:145px; max-height:108px; }
+    body.mode-layar h1 { font-size:clamp(32px,3.2vw,46px); }
+    body.mode-layar #stat { font-size:clamp(19px,2vw,28px); }
+    body.mode-layar #reader,body.mode-layar #kontrolScan,body.mode-layar .petunjuk { display:none !important; }
+    @media(max-width:900px) {
+      #jamSholat { width:190px; top:8px; right:8px; padding:8px 10px; border-radius:12px; }
+      .js-kicker { font-size:8px; } .js-jam { font-size:22px; } .js-tanggal { font-size:9px; }
+      .js-grid { gap:3px; margin-top:6px; } .js-waktu { padding:4px 1px; }
+      .js-label { font-size:8px; } .js-time { font-size:10px; } .js-catatan { font-size:7px; }
+    }
+    @media(max-width:600px) {
+      .wrap { padding:58px 12px 20px; }
+      .logo { width:95px; max-height:72px; }
+      h1 { font-size:26px; }
+      #stat { font-size:16px; }
+      #jamSholat { display:none; }
+      .kotak { padding:18px 12px; }
+      .baris { flex-wrap:wrap; }
+      .baris button { flex:1; }
+      .rincian-layar { gap:7px; }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+  <div id="videoLatar" aria-hidden="true" hidden><video id="videoBG" muted autoplay loop playsinline preload="metadata"></video><div class="gelap"></div></div>
+  <div class="wrap">
+    <img class="logo" src="data:image/png;base64,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" alt="Logo Masjid As-Shidqu" decoding="async">
+    <h1 id="judul">Checkin Konsultasi Santri</h1>
+    <div id="stat">Sistem konsultasi santri</div>
+    <section id="login">
+      <p>Masukkan PIN petugas</p>
+      <div class="baris"><input id="pin" type="password" inputmode="numeric" placeholder="PIN petugas" autocomplete="current-password"><button id="btnMasuk" type="button">Masuk</button></div>
+      <div class="petunjuk" id="pesanLogin">Gunakan PIN petugas konsultasi.</div>
+    </section>
+    <section id="app" hidden>
+      <div id="reader"></div>
+      <div id="reader-file-hidden" style="display:none"></div>
+      <div id="hasil" class="kotak"><div class="judul">Menunggu QR santri…</div><div>Arahkan kamera ke QR konsultasi.</div></div>
+      <div id="sambung"></div>
+      <div class="baris" id="kontrolScan"><button id="btnFoto" type="button">📷 Scan dengan kamera</button><input id="fileQR" type="file" accept="image/*" capture="environment" hidden><input id="manual" placeholder="Atau masukkan kode QR"><button id="btnCek" type="button">Cek</button></div>
+      <div class="petunjuk">Scan pertama mencatat waktu. Scan ulang menampilkan status kuning dan tidak mengubah waktu pertama.</div>
+    </section>
+  </div>
+  <button id="btnSuara" type="button" aria-label="Aktifkan atau matikan suara">🔊</button>
+  <div id="layar" aria-live="assertive" aria-atomic="true"></div>
+
+  <script>
+    // WAJIB: setelah Apps Script di-deploy, tempel URL Web App yang berakhiran /exec di bawah ini.
+    const API_URL = 'TEMPEL_URL_WEB_APP_APPS_SCRIPT_DI_SINI';
+    const VIDEO_LATAR = 'latar-kepulangan.mp4';
+    const MODE_PARAM = new URLSearchParams(location.search).get('mode');
+    const MODE = MODE_PARAM === 'hp' || MODE_PARAM === 'layar' ? MODE_PARAM : '';
+    const WAKTU_TUTUP_LAYAR = 6000;
+    document.title = 'Checkin Konsultasi Santri';
+    if (MODE === 'layar') {
+      document.body.classList.add('mode-layar');
+      const bg = document.getElementById('videoLatar');
+      const vid = document.getElementById('videoBG');
+      bg.hidden = false;
+      vid.src = new URL(VIDEO_LATAR, location.href).href;
+      vid.play().catch(function() {});
+      pasangJamSholat();
+    }
+
+    function api(aksi, data) {
+      if (!API_URL || API_URL.indexOf('TEMPEL_URL_') === 0) return Promise.reject(new Error('URL Apps Script belum diisi di konstanta API_URL pada konsultasi.html.'));
+      return fetch(API_URL, { method: 'POST', body: JSON.stringify(Object.assign({ aksi: aksi }, data || {})) })
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+    }
+    function esc(v) {
+      return String(v == null || v === '' ? '—' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+    function updateStat(r) {
+      if (r && typeof r.total === 'number') document.getElementById('stat').textContent = 'Terdaftar: ' + r.total + ' · Sudah dipakai: ' + (r.dipakai || 0);
+    }
+    function kelasStatus(r) {
+      if (r.status === 'VALID') return 'valid';
+      if (r.status === 'SUDAH') return 'sudah';
+      if (r.status === 'PALSU' || r.status === 'PIN_SALAH') return 'palsu';
+      return 'error';
+    }
+    function rincianHTML(r, besar) {
+      const c = besar ? 'rincian-layar' : 'rincian';
+      return '<div class="' + c + '">' +
+        '<div><strong>Bpk:</strong> ' + esc(r.ayah) + '</div>' +
+        '<div><strong>Ibu:</strong> ' + esc(r.ibu) + '</div>' +
+        '<div><strong>Wali santri dari:</strong> ' + esc(r.santri) + '</div>' +
+        '<div><strong>Alamat:</strong> ' + esc(r.alamat) + '</div>' +
+        '<div><strong>Kelas:</strong> ' + esc(r.kelas) + '</div>' +
+        '</div>';
+    }
+    function kontenHasil(r, besar) {
+      const css = kelasStatus(r);
+      if (r.status === 'VALID') {
+        return '<div class="lencana">✓ BOLEH MASUK</div>' + rincianHTML(r, besar) + '<div class="' + (besar ? 'cta-layar' : 'cta') + '">SILAHKAN MASUK</div>';
+      }
+      if (r.status === 'SUDAH') {
+        return '<div class="lencana">SUDAH DISCAN/DIPAKAI</div><div class="headline">QR SUDAH DIGUNAKAN</div>' + rincianHTML(r, besar) + '<div class="sub-layar">Waktu check-in pertama: ' + esc(r.waktu || '—') + '</div>';
+      }
+      if (r.status === 'PALSU') {
+        return '<div class="headline">✕ QR TIDAK TERDAFTAR</div><div class="sub-layar">Silakan periksa QR santri.</div>';
+      }
+      return '<div class="headline">' + esc(r.pesan || 'Terjadi kesalahan') + '</div>';
+    }
+    function tampilHP(r) {
+      const el = document.getElementById('hasil');
+      el.className = 'kotak ' + kelasStatus(r);
+      el.innerHTML = kontenHasil(r, false);
+      updateStat(r);
+      bunyi(r.status);
+      if (navigator.vibrate) navigator.vibrate(r.status === 'VALID' ? 140 : [180,80,180]);
+      if (MODE === 'hp') {
+        clearTimeout(timerHasilHP);
+        timerHasilHP = setTimeout(function() { idleHP(); }, r.status === 'VALID' ? 3500 : 4000);
+      }
+    }
+    function tampilLayar(r) {
+      const el = document.getElementById('layar');
+      el.className = 'aktif ' + kelasStatus(r);
+      el.innerHTML = '<button type="button" class="tutup" aria-label="Tutup hasil">×</button>' + kontenHasil(r, true);
+      el.querySelector('.tutup').addEventListener('click', tutupLayar);
+      updateStat(r);
+      bunyi(r.status);
+      clearTimeout(timerLayar);
+      timerLayar = setTimeout(tutupLayar, WAKTU_TUTUP_LAYAR);
+    }
+    function tutupLayar() {
+      clearTimeout(timerLayar);
+      const el = document.getElementById('layar');
+      el.className = '';
+      el.innerHTML = '';
+    }
+    function idleHP() {
+      const el = document.getElementById('hasil');
+      el.className = 'kotak';
+      el.innerHTML = '<div class="judul">Menunggu QR santri…</div><div>Arahkan kamera ke QR konsultasi.</div>';
+    }
+    function showErrorPesan(text) { document.getElementById('pesanLogin').textContent = text; }
+
+    let pin = '';
+    let scanner = null;
+    let scannerFile = null;
+    let sibuk = false;
+    let kodeTerakhir = '';
+    let waktuTerakhir = 0;
+    let timerHasilHP = null;
+    let timerLayar = null;
+    let idTampil = null;
+    let audioCtx = null;
+    let suaraNyala = true;
+
+    function masuk() {
+      pin = document.getElementById('pin').value.trim();
+      if (!pin) { showErrorPesan('Masukkan PIN petugas terlebih dahulu.'); return; }
+      document.getElementById('btnMasuk').disabled = true;
+      showErrorPesan('Memeriksa PIN…');
+      api('ping', { pin: pin }).then(function(r) {
+        if (r.status === 'PIN_SALAH') { showErrorPesan('PIN salah. Periksa kembali.'); return; }
+        if (r.status === 'ERROR') { showErrorPesan(r.pesan || 'Tidak dapat memuat sistem.'); return; }
+        document.getElementById('login').hidden = true;
+        document.getElementById('app').hidden = false;
+        updateStat(r);
+        document.getElementById('sambung').textContent = MODE === 'layar' ? '● Menyambungkan layar…' : '● Siap memindai';
+        if (MODE === 'layar') mulaiPantau(); else mulaiScan();
+      }).catch(function(e) { showErrorPesan('Gagal terhubung: ' + e.message); })
+        .finally(function() { document.getElementById('btnMasuk').disabled = false; });
+    }
+    document.getElementById('btnMasuk').addEventListener('click', masuk);
+    document.getElementById('pin').addEventListener('keydown', function(e) { if (e.key === 'Enter') masuk(); });
+    document.getElementById('btnCek').addEventListener('click', function() {
+      const input = document.getElementById('manual');
+      const v = input.value.trim(); input.value = '';
+      if (v) proses(v);
+    });
+    document.getElementById('manual').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('btnCek').click(); });
+    document.getElementById('btnFoto').addEventListener('click', function() { document.getElementById('fileQR').click(); });
+    document.getElementById('fileQR').addEventListener('change', bacaFoto);
+
+    function konfigurasiQR() {
+      return typeof Html5QrcodeSupportedFormats !== 'undefined'
+        ? { formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE], verbose: false }
+        : { verbose: false };
+    }
+    function mulaiScan() {
+      if (typeof Html5Qrcode === 'undefined') {
+        document.getElementById('sambung').textContent = 'Pemindai belum termuat. Periksa koneksi internet atau masukkan kode secara manual.';
+        return;
+      }
+      scanner = new Html5Qrcode('reader', konfigurasiQR());
+      scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 240, height: 240 } }, function(text) { proses(text); }, function() {})
+        .then(function() { document.getElementById('sambung').textContent = '● Kamera aktif'; })
+        .catch(function() { document.getElementById('sambung').textContent = 'Kamera tidak bisa dibuka. Pakai tombol scan foto atau input kode.'; });
+    }
+    function bacaFoto(ev) {
+      const file = ev.target.files && ev.target.files[0]; ev.target.value = '';
+      if (!file || sibuk) return;
+      if (typeof Html5Qrcode === 'undefined') return;
+      if (!scannerFile) scannerFile = new Html5Qrcode('reader-file-hidden', konfigurasiQR());
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = function() {
+        const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas'); canvas.width = Math.round(img.width * scale); canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height); URL.revokeObjectURL(url);
+        canvas.toBlob(function(blob) {
+          if (!blob) { tampilHP({status:'ERROR',pesan:'Foto QR tidak dapat diproses.'}); return; }
+          const f = new File([blob], 'qr.jpg', {type:'image/jpeg'});
+          scannerFile.scanFile(f, false).then(proses).catch(function() { tampilHP({status:'PALSU',pesan:'QR tidak terbaca'}); });
+        }, 'image/jpeg', .92);
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); tampilHP({status:'ERROR',pesan:'Foto tidak dapat dibuka.'}); };
+      img.src = url;
+    }
+    function proses(kode) {
+      kode = String(kode || '').trim();
+      if (!kode || sibuk) return;
+      const now = Date.now();
+      if (kode === kodeTerakhir && now - waktuTerakhir < 4000) return;
+      sibuk = true; kodeTerakhir = kode; waktuTerakhir = now;
+      document.getElementById('hasil').className = 'kotak';
+      document.getElementById('hasil').innerHTML = '<div class="judul">Memeriksa QR…</div>';
+      api('cek', { kode: kode, pin: pin }).then(function(r) {
+        if (r.status === 'PIN_SALAH') { showErrorPesan('PIN salah atau telah berubah.'); return; }
+        if (MODE === 'layar') { document.getElementById('sambung').textContent = '● Scan diterima · menunggu hasil berikutnya'; }
+        else tampilHP(r);
+      }).catch(function(e) {
+        tampilHP({status:'ERROR',pesan:'Gagal terhubung: ' + e.message});
+      }).finally(function() { sibuk = false; });
+    }
+    function mulaiPantau() {
+      function poll() {
+        api('terakhir', { pin: pin }).then(function(r) {
+          document.getElementById('sambung').textContent = '● Tersambung · diperiksa ' + new Date().toLocaleTimeString('id-ID');
+          if (r && r.id) {
+            if (idTampil === null) idTampil = r.id; // Jangan tampilkan hasil lama saat proyektor baru dibuka.
+            else if (r.id !== idTampil) { idTampil = r.id; tampilLayar(r); }
+          } else if (idTampil === null) idTampil = 'KOSONG';
+          setTimeout(poll, 1000);
+        }).catch(function() {
+          document.getElementById('sambung').textContent = '○ Terputus, mencoba lagi…';
+          setTimeout(poll, 3500);
+        });
+      }
+      poll();
+    }
+
+    function siapkanSuara() {
+      try { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch(e) {}
+    }
+    function tone(freq, start, duration, type) {
+      if (!audioCtx || !suaraNyala) return;
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain(), t = audioCtx.currentTime + start;
+      osc.type = type || 'sine'; osc.frequency.value = freq;
+      gain.gain.setValueAtTime(.0001, t); gain.gain.exponentialRampToValueAtTime(.22, t+.02); gain.gain.exponentialRampToValueAtTime(.0001, t+duration);
+      osc.connect(gain); gain.connect(audioCtx.destination); osc.start(t); osc.stop(t+duration+.04);
+    }
+    function bunyi(status) {
+      if (!suaraNyala || !audioCtx) return;
+      if (status === 'VALID') { tone(880,0,.18); tone(1320,.16,.28); }
+      else if (status === 'SUDAH') { tone(500,0,.16,'square'); tone(390,.2,.18,'square'); }
+      else if (status === 'PALSU' || status === 'ERROR') { tone(170,0,.4,'sawtooth'); }
+    }
+    document.getElementById('btnSuara').addEventListener('click', function() {
+      siapkanSuara(); suaraNyala = !suaraNyala;
+      this.textContent = suaraNyala ? '🔊' : '🔇';
+      if (suaraNyala) tone(880,0,.18);
+    });
+    document.addEventListener('pointerdown', siapkanSuara, {once:true});
+
+    // Kalkulasi jam dan perkiraan waktu sholat di browser; tidak menambah request ke server.
+    function pasangJamSholat() {
+      const LINTANG = -6.8506, BUJUR = 108.5041, ZONA = 7;
+      const panel = document.createElement('aside'); panel.id = 'jamSholat';
+      panel.setAttribute('aria-label','Jam dan perkiraan waktu salat Pesantren As-Shidqu');
+      panel.innerHTML = '<div class="js-kicker">PESANTREN AS-SHIDQU · WIB</div><div class="js-jam" id="jsJam">--:--:--</div><div class="js-tanggal" id="jsTanggal"></div><div class="js-grid" id="jsGrid"></div><div class="js-catatan">Perkiraan lokal Sampora · Asar Syafi’i</div>';
+      document.body.appendChild(panel);
+      function rad(x){return x*Math.PI/180;} function deg(x){return x*180/Math.PI;} function norm(x){return (x%360+360)%360;}
+      function fmtMin(v){v=Math.round(v);v=(v%1440+1440)%1440;return String(Math.floor(v/60)).padStart(2,'0')+':'+String(v%60).padStart(2,'0');}
+      function dateJakarta(now){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jakarta',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);const o={};parts.forEach(p=>{if(p.type!=='literal')o[p.type]=p.value;});return {year:+o.year,month:+o.month,day:+o.day,key:o.year+'-'+o.month+'-'+o.day};}
+      function calculate(dt){let y=dt.year,m=dt.month,d=dt.day;if(m<=2){y--;m+=12;}const a=Math.floor(y/100),b=2-a+Math.floor(a/4);const jd=Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+d+b-1524.5-ZONA/24;const t=(jd-2451545)/36525;const l0=norm(280.46646+t*(36000.76983+.0003032*t));const an=norm(357.52911+t*(35999.05029-.0001537*t));const e=.016708634-t*(.000042037+.0000001267*t);const corr=Math.sin(rad(an))*(1.914602-t*(.004817+.000014*t))+Math.sin(rad(2*an))*(.019993-.000101*t)+Math.sin(rad(3*an))*.000289;const om=125.04-1934.136*t;const lon=l0+corr-.00569-.00478*Math.sin(rad(om));const eps0=23+(26+(21.448-t*(46.815+t*(.00059-t*.001813)))/60)/60;const eps=eps0+.00256*Math.cos(rad(om));const dec=Math.asin(Math.sin(rad(eps))*Math.sin(rad(lon)));const y2=Math.pow(Math.tan(rad(eps)/2),2);const eq=4*deg(y2*Math.sin(2*rad(l0))-2*e*Math.sin(rad(an))+4*e*y2*Math.sin(rad(an))*Math.cos(2*rad(l0))-.5*y2*y2*Math.sin(4*rad(l0))-1.25*e*e*Math.sin(2*rad(an)));const noon=720-4*BUJUR-eq+ZONA*60;function ha(alt){const v=(Math.sin(rad(alt))-Math.sin(rad(LINTANG))*Math.sin(dec))/(Math.cos(rad(LINTANG))*Math.cos(dec));return deg(Math.acos(Math.max(-1,Math.min(1,v))));}const altAsar=deg(Math.atan(1/(1+Math.tan(Math.abs(rad(LINTANG)-dec)))));return [['Subuh',fmtMin(noon-4*ha(-20)+2)],['Zuhur',fmtMin(noon+3)],['Asar',fmtMin(noon+4*ha(altAsar)+2)],['Magrib',fmtMin(noon+4*ha(-0.833-0.0347*Math.sqrt(365))+2)],['Isya',fmtMin(noon+4*ha(-18)+2)]];}
+      let lastDate='';function updateClock(){const now=new Date(),dt=dateJakarta(now);document.getElementById('jsJam').textContent=new Intl.DateTimeFormat('id-ID',{timeZone:'Asia/Jakarta',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(now).replace(/\./g,':');document.getElementById('jsTanggal').textContent=new Intl.DateTimeFormat('id-ID',{timeZone:'Asia/Jakarta',weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(now);if(lastDate!==dt.key){document.getElementById('jsGrid').innerHTML=calculate(dt).map(x=>'<div class="js-waktu"><span class="js-label">'+x[0]+'</span><span class="js-time">'+x[1]+'</span></div>').join('');lastDate=dt.key;}}
+      updateClock();setInterval(updateClock,1000);
+    }
+  </script>
+</body>
+</html>
