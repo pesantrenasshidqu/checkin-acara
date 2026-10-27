@@ -119,11 +119,31 @@ function siapkanKonsultasiSantri() {
   sh.getRange(first, KS.COL_QR, n, 1).setFormulas(qrFormulas);
   sh.getRange(first, KS.COL_LINK, n, 1).setFormulas(linkFormulas);
   sh.getRange(first, KS.COL_KODE, n, 1).setValues(codeValues);
+
+  // Ratakan format data F:J. Format lama pada baris pertama sempat membuat nilai BELUM/kode/link tidak terlihat.
+  const dataOutput = sh.getRange(first, KS.COL_STATUS, n, 5);
+  dataOutput.setFontColor('#111827')
+    .setBackground('#FFFFFF')
+    .setVerticalAlignment('middle')
+    .setWrap(true);
   sh.setRowHeights(first, n, 96);
-  sh.getRange(first, KS.COL_STATUS, n, 1).setHorizontalAlignment('center');
-  sh.getRange(first, KS.COL_QR, n, 1).setHorizontalAlignment('center').setVerticalAlignment('middle');
-  sh.getRange(first, KS.COL_WAKTU, n, 1).setHorizontalAlignment('center');
-  sh.getRange(first, KS.COL_KODE, n, 1).setFontFamily('Roboto Mono').setFontSize(9).setHorizontalAlignment('center');
+  sh.getRange(first, KS.COL_STATUS, n, 1)
+    .setHorizontalAlignment('center')
+    .setFontWeight('bold');
+  sh.getRange(first, KS.COL_WAKTU, n, 1)
+    .setHorizontalAlignment('center')
+    .setNumberFormat('dd/MM/yyyy HH:mm:ss');
+  sh.getRange(first, KS.COL_QR, n, 1)
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle');
+  sh.getRange(first, KS.COL_LINK, n, 1)
+    .setHorizontalAlignment('left')
+    .setFontColor('#1155CC');
+  sh.getRange(first, KS.COL_KODE, n, 1)
+    .setFontFamily('Roboto Mono')
+    .setFontSize(9)
+    .setHorizontalAlignment('center')
+    .setFontWeight('bold');
   SpreadsheetApp.flush();
   ss.toast('QR diperbarui. ' + dibuat + ' kode dibuat, ' + diperbaiki + ' kode rusak diperbaiki. Kolom Kode QR terlihat di kolom terakhir.', 'Konsultasi Santri', 9);
 }
