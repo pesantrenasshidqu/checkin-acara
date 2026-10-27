@@ -156,10 +156,10 @@
     function kontenHasil(r, besar) {
       const css = kelasStatus(r);
       if (r.status === 'VALID') {
-        return '<div class="lencana">BOLEH MASUK</div><div class="headline">✓ BOLEH MASUK</div>' + rincianHTML(r, besar) + '<div class="' + (besar ? 'cta-layar' : 'cta') + '">SILAHKAN MASUK</div>';
+        return '<div class="lencana">✓ BOLEH MASUK</div>' + rincianHTML(r, besar) + '<div class="' + (besar ? 'cta-layar' : 'cta') + '">SILAHKAN MASUK</div>';
       }
       if (r.status === 'SUDAH') {
-        return '<div class="lencana">SUDAH DISCAN/DIPAKAI</div><div class="headline">SUDAH DISCAN/DIPAKAI</div>' + rincianHTML(r, besar) + '<div class="sub-layar">QR ini sudah pernah digunakan. Waktu check-in pertama: ' + esc(r.waktu || '—') + '</div>';
+        return '<div class="lencana">SUDAH DISCAN/DIPAKAI</div><div class="headline">QR SUDAH DIGUNAKAN</div>' + rincianHTML(r, besar) + '<div class="sub-layar">Waktu check-in pertama: ' + esc(r.waktu || '—') + '</div>';
       }
       if (r.status === 'PALSU') {
         return '<div class="headline">✕ QR TIDAK TERDAFTAR</div><div class="sub-layar">Silakan periksa QR santri.</div>';
