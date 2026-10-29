@@ -1,49 +1,81 @@
-# Checkin Konsultasi Santri — Petunjuk pemasangan
+# Check-in Kunjungan dan Halaqoh — Petunjuk Integrasi
 
-Sistem ini terpisah dari check-in acara dan kepulangan. Halaman GitHub menggunakan `konsultasi.html`; backend memakai Apps Script yang diikat ke spreadsheet konsultasi.
+Aplikasi menggunakan satu Google Spreadsheet untuk dua alur QR:
+- **Kunjungan**: kode lama berawalan `KS-`; hasil menampilkan Bpk, Ibu, Wali Santri dari, Alamat, dan Kelas.
+- **Halaqoh**: kode berawalan `HQ-`; hasil hanya menampilkan Nama Santri, Kelas Berapa, Siapa yang akan Konsultasi, Lokasi Konsultasi, Pertanyaan yang akan diajukan, dan Jadwal Konsultasi 08:00–09:00 WIB.
 
-## Struktur spreadsheet
+Kode sumber front end: [konsultasi.html](https://github.com/pesantrenasshidqu/checkin-acara/blob/main/konsultasi.html)
+Kode sumber Apps Script: [apps-script/Code.gs](https://github.com/pesantrenasshidqu/checkin-acara/blob/main/apps-script/Code.gs)
 
-Tab yang dipakai: `Sheet1`. Fungsi persiapan mencari baris pertama yang tampak seperti data santri (nama santri, nama ayah/ibu, dan alamat atau kelas), jadi judul acara pada baris 4 tidak dianggap sebagai santri.
+## 1. Struktur spreadsheet
 
+### Tab `Sheet1` — Data Kunjungan
+
+Pertahankan tab ini dan jangan mengganti nama jika aplikasi lama sudah memakai tab tersebut. Kolom:
 - A: Nama Santri
-- B: Ayah
-- C: Ibu
+- B: Nama Bapak Wali Santri
+- C: Nama Ibu Wali Santri
 - D: Alamat
 - E: Kelas
-- F: Status (dibuat otomatis)
-- G: Waktu Check-in (dibuat otomatis)
-- H: QR (gambar otomatis)
-- I: Link QR (tautan otomatis)
-- J: Kode QR (kode unik yang terlihat di kolom terakhir)
+- F: Status
+- G: Waktu Check-in
+- H: QR
+- I: Link QR
+- J: Kode QR (`KS-`)
 
-Jangan edit manual kolom F:J setelah menjalankan persiapan, kecuali memang sedang memperbaiki data. Fungsi persiapan dapat dijalankan ulang: kode `KS-...` yang valid, status, dan waktu check-in dipertahankan; kode yang rusak/mengandung teks header akan diperbaiki dan rumus QR diperbarui. Jika tab bukan bernama `Sheet1`, ubah `SHEET_NAME` pada `Code.gs` sesuai nama tab.
+Kode Kunjungan dan status scan yang sudah ada dipertahankan oleh fungsi persiapan.
 
-## A. Pasang backend Apps Script
+### Tab `Permohonan Halaqoh` — Data formulir konsultasi
 
-1. Buka spreadsheet konsultasi yang benar.
-2. Pilih **Extensions → Apps Script** agar project terikat ke spreadsheet konsultasi, bukan ke spreadsheet check-in lama.
-3. Ganti isi `Code.gs` dengan isi folder `apps-script/Code.gs`, lalu simpan.
-4. Pilih fungsi `siapkanKonsultasiSantri` lalu klik **Run** dan izinkan akses yang diminta. Jika baris 2 berisi data santri sekaligus header F:J, fungsi akan menyisipkan baris header baru agar data pertama tidak tertimpa. Fungsi juga melewati baris judul non-data, memperbaiki kode QR rusak, membuat ulang rumus QR/link, dan menampilkan `Kode QR` di kolom J. Kode valid, status, dan waktu check-in dipertahankan.
-5. Muat ulang spreadsheet. Menu **Konsultasi Santri** akan muncul. Pilih **Cetak semua QR ke Google Docs** untuk membuat dokumen siap cetak; izinkan akses Docs/Drive dan koneksi internet saat diminta. Dokumen berisi 12 kartu per halaman (3 kolom × 4 baris), lengkap dengan QR, nama santri, kelas, dan kode unik. Jika memungkinkan dokumen disimpan di folder yang sama dengan spreadsheet; jika tidak, dokumen tetap tersedia di Drive Saya. Klik **Buka Google Docs**, lalu pilih **File → Print**.
-6. Gunakan **Atur PIN petugas** untuk mengganti PIN bawaan `1234` sebelum kegiatan.
-7. Setelah mengganti kode Apps Script, pilih **Deploy → Manage deployments**, tekan ikon pensil pada deployment Web App yang sudah ada, pilih **New version**, lalu **Deploy**. Dengan cara ini URL `/exec` biasanya tetap sama; gunakan URL yang sama yang sudah dipasang di halaman GitHub. Pastikan **Execute as: Me** dan **Who has access: Anyone**.
+Baris pertama adalah header. A:H berisi data formulir:
+- A: Timestamp
+- B: Email Address
+- C: Nama Santri
+- D: Kelas Berapa
+- E: Siapa yang akan Konsultasi
+- F: Perkiraan Konsultasi pukul berapa
+- G: Lokasi Konsultasi
+- H: Pertanyaan yang akan diajukan
 
-## B. Hubungkan halaman GitHub ke Apps Script
+Kolom I:M dipakai oleh sistem:
+- I: Status Check-in
+- J: Waktu Check-in
+- K: QR
+- L: Link QR
+- M: Kode QR (`HQ-`)
 
-1. URL Web App yang kamu kirim sudah dipasang pada konstanta `API_URL` di `konsultasi.html`; tidak perlu menggantinya lagi.
-2. Setelah deployment Apps Script diperbarui, buka halaman GitHub Pages: `/konsultasi.html?mode=hp` untuk HP pemindai atau `/konsultasi.html?mode=layar` untuk proyektor.
+## 2. Tambahkan tab Halaqoh ke spreadsheet yang sedang dipakai
 
-Video latar memakai aset `latar-kepulangan.mp4` yang ada di root repositori. Logo putih Masjid As-Shidqu sudah ditanam langsung di `konsultasi.html`, sehingga tidak membutuhkan file logo eksternal.
+1. Unduh file workbook gabungan dari percakapan yang menyiapkannya: `DATA-KUNJUNGAN-DAN-HALAQOH.xlsx`.
+2. Buka file tersebut di Google Sheets. Jika masih terbuka sebagai file Excel, pilih **File → Save as Google Sheets**.
+3. Pada tab `Permohonan Halaqoh`, buka menu tab lalu pilih **Copy to → Existing spreadsheet**.
+4. Pilih spreadsheet Data Kunjungan yang sudah dipakai aplikasi.
+5. Jika nama hasil salinan berbeda, ubah nama tab persis menjadi `Permohonan Halaqoh`.
+6. Jangan hapus atau mengganti tab `Sheet1`.
 
-## Status hasil scan
+Data pribadi, alamat, email, dan pertanyaan konsultasi tetap berada di spreadsheet; jangan menaruh baris data tersebut di repo GitHub publik.
 
-- QR valid pertama: kolom F menjadi `SUDAH DISCAN/DIPAKAI`, kolom G mencatat waktu pertama, layar hijau menampilkan Bpk, Ibu, nama santri, alamat, kelas, serta `SILAHKAN MASUK`.
-- Scan ulang: tampilan kuning `SUDAH DISCAN/DIPAKAI`, identitas tetap tampil, waktu pertama tidak diubah.
-- Kode QR tidak terdaftar: tampilan merah `QR TIDAK TERDAFTAR` akan muncul di HP dan proyektor. Layar proyektor memakai ID terakhir saat login sebagai baseline agar scan baru—termasuk kode tidak terdaftar—tetap ditampilkan.
+## 3. Terapkan backend Apps Script
 
-Pemindaian QR menggunakan kode unik `KS-...`, bukan nama yang tercetak. Ini menghindari bentrok bila ada nama santri yang sama. Kolom J `Kode QR` ditampilkan di sisi paling kanan untuk memudahkan pemeriksaan manual.
+1. Buka spreadsheet utama → **Extensions → Apps Script**.
+2. Buka file `apps-script/Code.gs` dari repo ini dan salin seluruh isinya ke project Apps Script yang terikat ke spreadsheet utama, menggantikan kode lama.
+3. Simpan. Pastikan fungsi yang tersedia adalah `siapkanDataHalaqoh`.
+4. Pilih fungsi `siapkanDataHalaqoh` lalu klik **Run** dan beri izin yang diminta.
+5. Fungsi ini menyiapkan kolom I:M, mempertahankan kode `HQ-` yang sudah valid, membuat kode untuk data baru, serta memperbarui QR dan tautannya.
+6. Untuk memperbarui web app yang telah digunakan halaman GitHub, buka **Deploy → Manage deployments → Edit** pada deployment yang ada, pilih **New version**, lalu **Deploy**. Pertahankan URL deployment yang sama agar konstanta `API_URL` di halaman tidak perlu diganti.
+7. Pada menu spreadsheet **Konsultasi Santri**, tersedia persiapan Kunjungan dan persiapan Halaqoh yang terpisah.
 
-## Catatan
+## 4. Cara kerja scan
 
-Jam dan perkiraan waktu salat tampil pada mode proyektor, dihitung di browser tanpa request tambahan ke Apps Script. Perkiraan jadwal menggunakan koordinat Sampora, Cilimus, Kuningan dan Asar Syafi'i; cocokkan dengan jadwal resmi pesantren. QR di sheet menggunakan layanan QR eksternal `api.qrserver.com`, sehingga membuat atau menampilkan gambar QR membutuhkan koneksi internet.
+- QR `KS-`: data diproses dari tab `Sheet1`; hasil tetap menampilkan identitas wali dan santri untuk Kunjungan.
+- QR `HQ-`: data diproses dari tab `Permohonan Halaqoh`; hasil hanya menampilkan enam informasi Halaqoh yang diminta.
+- Scan pertama mengubah status menjadi `SUDAH DISCAN/DIPAKAI` dan mencatat waktu scan.
+- Scan ulang menampilkan status kuning dan mempertahankan waktu scan pertama.
+- QR tidak dikenal menampilkan status `QR TIDAK TERDAFTAR`.
+
+## 5. Tautan aplikasi
+
+- HP pemindai: https://pesantrenasshidqu.github.io/checkin-acara/konsultasi.html?mode=hp
+- Proyektor: https://pesantrenasshidqu.github.io/checkin-acara/konsultasi.html?mode=layar
+
+Catatan: perubahan pada file Apps Script di GitHub hanya memperbarui sumber kode di repo. Backend web app baru aktif setelah kode disalin ke Apps Script yang terikat spreadsheet dan deployment dibuat ke versi baru.
