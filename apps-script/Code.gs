@@ -43,6 +43,7 @@ function onOpen() {
     .addItem('1. Siapkan kolom, kode, dan QR Kunjungan', 'siapkanKonsultasiSantri')
     .addItem('2. Siapkan data Halaqoh & QR', 'siapkanDataHalaqoh')
     .addItem('Cetak semua QR Kunjungan ke Google Docs', 'buatDokumenCetakQRSantri')
+    .addItem('Cetak semua QR Halaqoh ke Google Docs', 'buatDokumenCetakQRHalaqoh')
     .addItem('Atur PIN petugas', 'aturPinKonsultasiSantri')
     .addSeparator()
     .addItem('Reset status scan (sebelum acara)', 'resetKonsultasiSantri')
@@ -467,6 +468,170 @@ function ksRingkasanDariRows_(rows) {
   });
   return { total:total, dipakai:dipakai };
 }
+
+
+/**
+ * Membuat Google Docs siap cetak untuk semua QR Halaqoh.
+ * Membaca tab Permohonan Halaqoh, kolom C (nama), D (kelas), G (lokasi),
+ * dan M (kode HQ). Tidak mengubah status atau waktu scan.
+ */
+function buatDokumenCetakQRHalaqoh() {
+  const ui = SpreadsheetApp.getUi();
+  const sh = ksHalaqohSheet_();
+  if (!sh) {
+    ui.alert('Tab Halaqoh belum tersedia', 'Buat/salin tab "Permohonan Halaqoh" ke spreadsheet ini, lalu jalankan menu Konsultasi Santri → Siapkan data Halaqoh & QR.', ui.ButtonSet.OK);
+    return;
+  }
+
+  const first = KS.HALAQOH_DATA_START_ROW;
+  const last = sh.getLastRow();
+  if (last < first) {
+    ui.alert('Belum ada data Halaqoh', 'Tab Permohonan Halaqoh belum berisi pengajuan.', ui.ButtonSet.OK);
+    return;
+  }
+
+  const rows = sh.getRange(first, 1, last - first + 1, KS.HALAQOH_COL_KODE).getDisplayValues();
+  const santri = [];
+  const seen = new Set();
+  rows.forEach(function(r, i) {
+    const nama = String(r[KS.HALAQOH_COL_SANTRI - 1] || '').trim();
+    if (!nama) return;
+    const code = String(r[KS.HALAQOH_COL_KODE - 1] || '').trim().toUpperCase();
+    if (!/^HQ-[A-Z0-9]{12}$/.test(code)) {
+      throw new Error('Kode QR Halaqoh belum valid untuk "' + nama + '" pada baris ' + (first + i) +
+        '. Jalankan Konsultasi Santri → Siapkan data Halaqoh & QR terlebih dahulu.');
+    }
+    if (seen.has(code)) throw new Error('Kode QR Halaqoh ganda ditemukan: ' + code + '. Perbaiki duplikasi sebelum mencetak.');
+    seen.add(code);
+    santri.push({
+      nama: nama,
+      kelas: String(r[KS.HALAQOH_COL_KELAS - 1] || '').trim(),
+      siapa: String(r[KS.HALAQOH_COL_SIAPA - 1] || '').trim(),
+      lokasi: String(r[KS.HALAQOH_COL_LOKASI - 1] || '').trim(),
+      kode: code
+    });
+  });
+
+  if (!santri.length) {
+    ui.alert('Belum ada data Halaqoh', 'Tidak ditemukan pengajuan dengan nama santri yang valid.', ui.ButtonSet.OK);
+    return;
+  }
+
+  const blobs = [];
+  const BATCH = 18;
+  for (let start = 0; start < santri.length; start += BATCH) {
+    const batch = santri.slice(start, start + BATCH);
+    const requests = batch.map(function(s) {
+      return { url: KS.QR_BASE + encodeURIComponent(s.kode), muteHttpExceptions: true };
+    });
+    let responses;
+    try {
+      responses = UrlFetchApp.fetchAll(requests);
+    } catch (err) {
+      throw new Error('Gagal mengambil gambar QR Halaqoh. Periksa koneksi internet, lalu coba lagi. Detail: ' + err.message);
+    }
+    responses.forEach(function(response, j) {
+      if (response.getResponseCode() !== 200 || !/^image\//i.test(String(response.getHeaders()['Content-Type'] || ''))) {
+        throw new Error('Gambar QR gagal dibuat untuk kode ' + batch[j].kode + '. Coba lagi setelah koneksi stabil.');
+      }
+      blobs.push(response.getBlob().setName('QR-' + batch[j].kode + '.png'));
+    });
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const tanggal = Utilities.formatDate(new Date(), 'Asia/Jakarta', 'dd-MM-yyyy HH.mm');
+  const doc = DocumentApp.create('QR Halaqoh - ' + tanggal);
+  const body = doc.getBody();
+  body.setMarginTop(24).setMarginBottom(24).setMarginLeft(24).setMarginRight(24);
+
+  const PER_HALAMAN = 12;
+  for (let pageStart = 0; pageStart < santri.length; pageStart += PER_HALAMAN) {
+    if (pageStart > 0) body.appendPageBreak();
+
+    const pJudul = body.appendParagraph('CHECK-IN HALAQOH SANTRI');
+    pJudul.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+    pJudul.setSpacingBefore(0).setSpacingAfter(2);
+    pJudul.editAsText().setFontFamily('Arial').setFontSize(15).setBold(true).setForegroundColor('#075E45');
+
+    const pInfo = body.appendParagraph('Kartu QR Halaqoh • ' + santri.length + ' pengajuan • ' + tanggal);
+    pInfo.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+    pInfo.setSpacingBefore(0).setSpacingAfter(8);
+    pInfo.editAsText().setFontFamily('Arial').setFontSize(8).setForegroundColor('#475569');
+
+    const slots = [];
+    for (let rr = 0; rr < 4; rr++) slots.push(['', '', '']);
+    const table = body.appendTable(slots);
+    table.setBorderWidth(0.75);
+    table.setBorderColor('#CBD5E1');
+
+    for (let offset = 0; offset < PER_HALAMAN; offset++) {
+      const pos = pageStart + offset;
+      if (pos >= santri.length) break;
+      const rowIndex = Math.floor(offset / 3);
+      const colIndex = offset % 3;
+      const cell = table.getCell(rowIndex, colIndex);
+      cell.clear();
+      cell.setBackgroundColor('#FFFFFF')
+        .setVerticalAlignment(DocumentApp.VerticalAlignment.MIDDLE)
+        .setPaddingTop(5).setPaddingBottom(5)
+        .setPaddingLeft(4).setPaddingRight(4);
+
+      const pJenis = cell.appendParagraph('HALAQOH');
+      pJenis.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      pJenis.setSpacingBefore(0).setSpacingAfter(2);
+      pJenis.editAsText().setFontFamily('Arial').setFontSize(7).setBold(true).setForegroundColor('#075E45');
+
+      const pQr = cell.appendParagraph('');
+      pQr.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      pQr.setSpacingBefore(0).setSpacingAfter(2);
+      const image = pQr.appendInlineImage(blobs[pos]);
+      image.setWidth(72).setHeight(72);
+
+      const pNama = cell.appendParagraph(santri[pos].nama);
+      pNama.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      pNama.setSpacingBefore(0).setSpacingAfter(1);
+      pNama.editAsText().setFontFamily('Arial').setFontSize(8).setBold(true).setForegroundColor('#0F172A');
+
+      const pKelas = cell.appendParagraph(santri[pos].kelas || 'Kelas —');
+      pKelas.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      pKelas.setSpacingBefore(0).setSpacingAfter(1);
+      pKelas.editAsText().setFontFamily('Arial').setFontSize(7).setForegroundColor('#475569');
+
+      const pWaktu = cell.appendParagraph('08:00–09:00 WIB');
+      pWaktu.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      pWaktu.setSpacingBefore(0).setSpacingAfter(1);
+      pWaktu.editAsText().setFontFamily('Arial').setFontSize(7).setForegroundColor('#475569');
+
+      const pKode = cell.appendParagraph(santri[pos].kode);
+      pKode.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      pKode.setSpacingBefore(0).setSpacingAfter(0);
+      pKode.editAsText().setFontFamily('Courier New').setFontSize(7).setBold(true).setForegroundColor('#075E45');
+    }
+  }
+
+  doc.saveAndClose();
+
+  try {
+    const sourceFile = DriveApp.getFileById(ss.getId());
+    const parents = sourceFile.getParents();
+    if (parents.hasNext()) DriveApp.getFileById(doc.getId()).moveTo(parents.next());
+  } catch (e) {
+    // Jika file tidak bisa dipindah folder, dokumen tetap tersimpan di Drive Saya.
+  }
+
+  const url = doc.getUrl();
+  const dialog = HtmlService.createHtmlOutput(
+    '<div style="font:14px Arial,sans-serif;padding:20px;color:#0f172a">' +
+      '<div style="font-size:20px;font-weight:700;color:#075e45;margin-bottom:8px">QR Halaqoh siap dicetak</div>' +
+      '<p>Berhasil membuat kartu QR untuk <b>' + santri.length + ' pengajuan Halaqoh</b>.</p>' +
+      '<p>Layout: 3 kolom × 4 baris per halaman. Buka dokumen, lalu pilih <b>File → Print</b>.</p>' +
+      '<p><a style="display:inline-block;background:#087b52;color:white;padding:11px 16px;border-radius:8px;text-decoration:none;font-weight:700" target="_blank" rel="noopener" href="' + url + '">Buka Google Docs</a></p>' +
+      '<p style="font-size:12px;color:#64748b">QR bersumber dari kode unik di kolom M. Status dan waktu scan tidak diubah. Pertanyaan konsultasi tidak dicetak pada kartu.</p>' +
+    '</div>'
+  ).setWidth(430).setHeight(230);
+  ui.showModalDialog(dialog, 'QR Halaqoh siap dicetak');
+}
+
 
 function aturPinKonsultasiSantri() {
   const ui = SpreadsheetApp.getUi();
