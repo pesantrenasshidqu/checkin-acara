@@ -63,7 +63,7 @@ Data pribadi, alamat, email, dan pertanyaan konsultasi tetap berada di spreadshe
 4. Pilih fungsi `siapkanDataHalaqoh` lalu klik **Run** dan beri izin yang diminta.
 5. Fungsi ini menyiapkan kolom I:M, mempertahankan kode `HQ-` yang sudah valid, membuat kode untuk data baru, serta memperbarui QR dan tautannya.
 6. Untuk memperbarui web app yang telah digunakan halaman GitHub, buka **Deploy → Manage deployments → Edit** pada deployment yang ada, pilih **New version**, lalu **Deploy**. Pertahankan URL deployment yang sama agar konstanta `API_URL` di halaman tidak perlu diganti.
-7. Pada menu spreadsheet **Konsultasi Santri**, tersedia persiapan Kunjungan dan persiapan Halaqoh yang terpisah.
+7. Pada menu spreadsheet **Konsultasi Santri**, tersedia persiapan Kunjungan dan Halaqoh secara terpisah, serta tombol cetak QR Kunjungan dan cetak QR Halaqoh ke Google Docs.
 
 ## 4. Cara kerja scan
 
@@ -73,7 +73,18 @@ Data pribadi, alamat, email, dan pertanyaan konsultasi tetap berada di spreadshe
 - Scan ulang menampilkan status kuning dan mempertahankan waktu scan pertama.
 - QR tidak dikenal menampilkan status `QR TIDAK TERDAFTAR`.
 
-## 5. Tautan aplikasi
+## 5. Cetak kartu QR Halaqoh
+
+Setelah kode terbaru pada `apps-script/Code.gs` disalin ke Apps Script dan disimpan, buka ulang spreadsheet atau refresh halaman agar menu `Konsultasi Santri` diperbarui.
+
+- Pilih **Konsultasi Santri → Cetak semua QR Halaqoh ke Google Docs**.
+- Sistem membaca nama, kelas, dan kode QR dari tab `Permohonan Halaqoh`; layout 3 kolom × 4 kartu per halaman.
+- Kartu berisi label HALAQOH, QR, nama santri, kelas, jadwal 08:00–09:00 WIB, serta kode `HQ-`.
+- Pertanyaan konsultasi tidak dicetak ke kartu QR agar informasi pribadi tidak tersebar tanpa keperluan.
+- Dokumen terbuka lewat dialog; di Google Docs pilih **File → Print**.
+- Tombol **Cetak semua QR Kunjungan ke Google Docs** yang lama tetap khusus Kunjungan. Gunakan tombol Halaqoh untuk mencetak data Halaqoh.
+
+## 6. Tautan aplikasi
 
 - HP pemindai: https://pesantrenasshidqu.github.io/checkin-acara/konsultasi.html?mode=hp
 - Proyektor: https://pesantrenasshidqu.github.io/checkin-acara/konsultasi.html?mode=layar
