@@ -22,13 +22,27 @@ const KS = Object.freeze({
   PIN_KEY: 'PIN_KONSULTASI_SANTRI',
   SPREADSHEET_KEY: 'ID_SHEET_KONSULTASI_SANTRI',
   CACHE_LAST_KEY: 'KONSULTASI_TERAKHIR',
-  QR_BASE: 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data='
+  QR_BASE: 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=',
+  HALAQOH_SHEET_NAME: 'Permohonan Halaqoh',
+  HALAQOH_DATA_START_ROW: 2,
+  HALAQOH_COL_SANTRI: 3,
+  HALAQOH_COL_KELAS: 4,
+  HALAQOH_COL_SIAPA: 5,
+  HALAQOH_COL_WAKTU_FORM: 6,
+  HALAQOH_COL_LOKASI: 7,
+  HALAQOH_COL_PERTANYAAN: 8,
+  HALAQOH_COL_STATUS: 9,
+  HALAQOH_COL_WAKTU_SCAN: 10,
+  HALAQOH_COL_QR: 11,
+  HALAQOH_COL_LINK: 12,
+  HALAQOH_COL_KODE: 13
 });
 
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('Konsultasi Santri')
-    .addItem('1. Siapkan kolom, kode, dan QR', 'siapkanKonsultasiSantri')
-    .addItem('Cetak semua QR ke Google Docs', 'buatDokumenCetakQRSantri')
+    .addItem('1. Siapkan kolom, kode, dan QR Kunjungan', 'siapkanKonsultasiSantri')
+    .addItem('2. Siapkan data Halaqoh & QR', 'siapkanDataHalaqoh')
+    .addItem('Cetak semua QR Kunjungan ke Google Docs', 'buatDokumenCetakQRSantri')
     .addItem('Atur PIN petugas', 'aturPinKonsultasiSantri')
     .addSeparator()
     .addItem('Reset status scan (sebelum acara)', 'resetKonsultasiSantri')
@@ -149,6 +163,91 @@ function siapkanKonsultasiSantri() {
   ss.toast('QR diperbarui. ' + dibuat + ' kode dibuat, ' + diperbaiki + ' kode rusak diperbaiki. Kolom Kode QR terlihat di kolom terakhir.', 'Konsultasi Santri', 9);
 }
 
+
+/**
+ * Menyiapkan kolom status, waktu scan, QR, tautan dan kode unik pada tab Permohonan Halaqoh.
+ * Data form A:H tidak diubah. Kode HQ- dipakai khusus untuk membedakan Halaqoh dari Kunjungan (KS-).
+ */
+function siapkanDataHalaqoh() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) throw new Error('Buka Apps Script dari spreadsheet utama melalui Extensions > Apps Script.');
+  const sh = ss.getSheetByName(KS.HALAQOH_SHEET_NAME);
+  if (!sh) throw new Error('Tab "' + KS.HALAQOH_SHEET_NAME + '" belum ada. Impor tab tersebut ke spreadsheet utama terlebih dahulu.');
+  PropertiesService.getScriptProperties().setProperty(KS.SPREADSHEET_KEY, ss.getId());
+  if (sh.getMaxColumns() < KS.HALAQOH_COL_KODE) {
+    sh.insertColumnsAfter(sh.getMaxColumns(), KS.HALAQOH_COL_KODE - sh.getMaxColumns());
+  }
+
+  sh.getRange(1, KS.HALAQOH_COL_STATUS, 1, 5)
+    .setValues([['Status Check-in', 'Waktu Check-in', 'QR', 'Link QR', 'Kode QR']])
+    .setBackground('#075E45').setFontColor('#FFFFFF').setFontWeight('bold')
+    .setHorizontalAlignment('center').setVerticalAlignment('middle').setWrap(true);
+
+  const last = sh.getLastRow();
+  if (last < KS.HALAQOH_DATA_START_ROW) {
+    ss.toast('Tab Halaqoh siap. Belum ada pengajuan untuk dibuatkan QR.', 'Konsultasi Santri', 7);
+    return;
+  }
+
+  const n = last - KS.HALAQOH_DATA_START_ROW + 1;
+  const rows = sh.getRange(KS.HALAQOH_DATA_START_ROW, 1, n, KS.HALAQOH_COL_KODE).getValues();
+  const reserved = new Set();
+  rows.forEach(function(r) {
+    const code = String(r[KS.HALAQOH_COL_KODE - 1] || '').trim().toUpperCase();
+    if (String(r[KS.HALAQOH_COL_SANTRI - 1] || '').trim() && /^HQ-[A-Z0-9]{12}$/.test(code)) reserved.add(code);
+  });
+
+  const used = new Set();
+  const status = [], waktu = [], codes = [], qr = [], links = [];
+  let made = 0;
+  rows.forEach(function(r, i) {
+    const student = String(r[KS.HALAQOH_COL_SANTRI - 1] || '').trim();
+    const rowNo = KS.HALAQOH_DATA_START_ROW + i;
+    if (!student) {
+      status.push([r[KS.HALAQOH_COL_STATUS - 1] || '']);
+      waktu.push([r[KS.HALAQOH_COL_WAKTU_SCAN - 1] || '']);
+      codes.push([r[KS.HALAQOH_COL_KODE - 1] || '']);
+      qr.push(['']);
+      links.push(['']);
+      return;
+    }
+    let code = String(r[KS.HALAQOH_COL_KODE - 1] || '').trim().toUpperCase();
+    if (!/^HQ-[A-Z0-9]{12}$/.test(code) || used.has(code)) {
+      do { code = 'HQ-' + Utilities.getUuid().replace(/-/g, '').substring(0, 12).toUpperCase(); }
+      while (reserved.has(code) || used.has(code));
+      reserved.add(code);
+      made++;
+    }
+    used.add(code);
+    status.push([String(r[KS.HALAQOH_COL_STATUS - 1] || '').trim() || 'BELUM']);
+    waktu.push([r[KS.HALAQOH_COL_WAKTU_SCAN - 1] || '']);
+    codes.push([code]);
+    qr.push(['=IMAGE("' + KS.QR_BASE + '"&ENCODEURL($M' + rowNo + '))']);
+    links.push(['="' + KS.QR_BASE + '"&ENCODEURL($M' + rowNo + ')']);
+  });
+
+  sh.getRange(KS.HALAQOH_DATA_START_ROW, KS.HALAQOH_COL_STATUS, n, 1).setValues(status);
+  sh.getRange(KS.HALAQOH_DATA_START_ROW, KS.HALAQOH_COL_WAKTU_SCAN, n, 1).setValues(waktu).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+  sh.getRange(KS.HALAQOH_DATA_START_ROW, KS.HALAQOH_COL_QR, n, 1).setFormulas(qr);
+  sh.getRange(KS.HALAQOH_DATA_START_ROW, KS.HALAQOH_COL_LINK, n, 1).setFormulas(links);
+  sh.getRange(KS.HALAQOH_DATA_START_ROW, KS.HALAQOH_COL_KODE, n, 1).setValues(codes);
+
+  const output = sh.getRange(KS.HALAQOH_DATA_START_ROW, KS.HALAQOH_COL_STATUS, n, 5);
+  output.setFontColor('#111827').setBackground('#FFFFFF').setVerticalAlignment('middle').setWrap(true);
+  sh.setColumnWidth(KS.HALAQOH_COL_STATUS, 175);
+  sh.setColumnWidth(KS.HALAQOH_COL_WAKTU_SCAN, 165);
+  sh.setColumnWidth(KS.HALAQOH_COL_QR, 110);
+  sh.setColumnWidth(KS.HALAQOH_COL_LINK, 360);
+  sh.setColumnWidth(KS.HALAQOH_COL_KODE, 180);
+  sh.setRowHeight(1, 36);
+  sh.setRowHeights(KS.HALAQOH_DATA_START_ROW, n, 78);
+  sh.getRange(KS.HALAQOH_DATA_START_ROW, KS.HALAQOH_COL_STATUS, n, 1).setHorizontalAlignment('center');
+  sh.getRange(KS.HALAQOH_DATA_START_ROW, KS.HALAQOH_COL_QR, n, 1).setHorizontalAlignment('center');
+  sh.getRange(KS.HALAQOH_DATA_START_ROW, KS.HALAQOH_COL_KODE, n, 1).setFontFamily('Roboto Mono').setFontSize(9).setHorizontalAlignment('center');
+  SpreadsheetApp.flush();
+  ss.toast('Data Halaqoh siap. ' + made + ' kode QR baru dibuat; kode lama yang valid dipertahankan.', 'Konsultasi Santri', 8);
+}
+
 /** Web App API: GET untuk diagnostik; transaksi memakai POST. */
 function doGet() {
   return ksJson_({ sistem: 'Checkin Konsultasi Santri', status: 'ONLINE', pesan: 'Web App aktif. Gunakan halaman GitHub untuk scan.' });
@@ -183,6 +282,7 @@ function cekKonsultasiSantri_(kode, pin) {
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
+    if (kode.indexOf('HQ-') === 0) return ksCekHalaqoh_(kode);
     const sh = ksSheet_();
     const last = sh.getLastRow(), first = ksCariBarisDataPertama_(sh);
     if (first > last) return ksSimpanEvent_(Object.assign({ status:'PALSU', kode:kode, pesan:'QR tidak terdaftar.' }, ksRingkasan_()));
@@ -273,11 +373,88 @@ function ksAdalahBarisSantri_(r) {
   return !/^(NAMA SANTRI|DATA KONSULTASI|ORANG TUA|KODE QR|KODE INTERNAL)$/i.test(santri);
 }
 
+
+/** Scan khusus Halaqoh. Dipanggil dari dalam lock agar kunjungan dan Halaqoh tidak memproses QR bersamaan. */
+function ksCekHalaqoh_(kode) {
+  const sh = ksHalaqohSheet_();
+  if (!sh) return ksSimpanEvent_({ status:'ERROR', kode:kode, pesan:'Tab "' + KS.HALAQOH_SHEET_NAME + '" belum tersedia. Tambahkan tab dan jalankan siapkanDataHalaqoh().' });
+  const last = sh.getLastRow();
+  if (last < KS.HALAQOH_DATA_START_ROW) return ksSimpanEvent_(Object.assign({status:'PALSU', kode:kode, pesan:'QR Halaqoh tidak terdaftar.'}, ksRingkasan_()));
+  const n = last - KS.HALAQOH_DATA_START_ROW + 1;
+  const rows = sh.getRange(KS.HALAQOH_DATA_START_ROW, 1, n, KS.HALAQOH_COL_KODE).getValues();
+  const idx = rows.findIndex(function(r) {
+    return String(r[KS.HALAQOH_COL_SANTRI - 1] || '').trim() &&
+      String(r[KS.HALAQOH_COL_KODE - 1] || '').trim().toUpperCase() === kode;
+  });
+  if (idx < 0) return ksSimpanEvent_(Object.assign({status:'PALSU', kode:kode, pesan:'QR Halaqoh tidak terdaftar.'}, ksRingkasan_()));
+
+  const r = rows[idx], rowNo = KS.HALAQOH_DATA_START_ROW + idx;
+  const oldStatus = String(r[KS.HALAQOH_COL_STATUS - 1] || '').trim().toUpperCase();
+  const sudah = oldStatus.indexOf('SUDAH DISCAN') >= 0 || oldStatus.indexOf('DIPAKAI') >= 0 || oldStatus === 'SUDAH';
+  const info = {
+    jenis: 'HALAQOH',
+    kode: kode,
+    santri: String(r[KS.HALAQOH_COL_SANTRI - 1] || '').trim(),
+    kelas: String(r[KS.HALAQOH_COL_KELAS - 1] || '').trim(),
+    siapaKonsultasi: String(r[KS.HALAQOH_COL_SIAPA - 1] || '').trim(),
+    lokasiKonsultasi: String(r[KS.HALAQOH_COL_LOKASI - 1] || '').trim(),
+    pertanyaan: String(r[KS.HALAQOH_COL_PERTANYAAN - 1] || '').trim(),
+    waktuKonsultasi: '08:00 - 09:00 WIB'
+  };
+  let waktu = r[KS.HALAQOH_COL_WAKTU_SCAN - 1];
+  if (!sudah) {
+    const now = new Date();
+    sh.getRange(rowNo, KS.HALAQOH_COL_STATUS).setValue('SUDAH DISCAN/DIPAKAI');
+    if (!(waktu instanceof Date) && !String(waktu || '').trim()) {
+      sh.getRange(rowNo, KS.HALAQOH_COL_WAKTU_SCAN).setValue(now).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+      waktu = now;
+    }
+  }
+  const waktuTeks = waktu instanceof Date
+    ? Utilities.formatDate(waktu, Session.getScriptTimeZone() || 'Asia/Jakarta', 'dd/MM/yyyy HH:mm:ss')
+    : String(waktu || '-');
+  return ksSimpanEvent_(Object.assign({status:sudah ? 'SUDAH' : 'VALID', waktu:waktuTeks}, info, ksRingkasan_()));
+}
+
+function ksHalaqohSheet_() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty(KS.SPREADSHEET_KEY);
+  const ss = id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet();
+  return ss ? ss.getSheetByName(KS.HALAQOH_SHEET_NAME) : null;
+}
+
+function ksRingkasanHalaqoh_() {
+  const sh = ksHalaqohSheet_();
+  if (!sh) return {total:0, dipakai:0};
+  const last = sh.getLastRow();
+  if (last < KS.HALAQOH_DATA_START_ROW) return {total:0, dipakai:0};
+  const rows = sh.getRange(KS.HALAQOH_DATA_START_ROW, 1, last - KS.HALAQOH_DATA_START_ROW + 1, KS.HALAQOH_COL_STATUS).getValues();
+  let total = 0, dipakai = 0;
+  rows.forEach(function(r) {
+    if (!String(r[KS.HALAQOH_COL_SANTRI - 1] || '').trim()) return;
+    total++;
+    const st = String(r[KS.HALAQOH_COL_STATUS - 1] || '').toUpperCase();
+    if (st.indexOf('SUDAH DISCAN') >= 0 || st.indexOf('DIPAKAI') >= 0 || st === 'SUDAH') dipakai++;
+  });
+  return {total:total, dipakai:dipakai};
+}
+
 function ksRingkasan_() {
   const sh = ksSheet_(), last = sh.getLastRow(), first = ksCariBarisDataPertama_(sh);
-  if (first > last) return { total:0, dipakai:0 };
-  const rows = sh.getRange(first, 1, last - first + 1, KS.COL_STATUS).getValues();
-  return ksRingkasanDariRows_(rows);
+  let kunjungan = {total:0, dipakai:0};
+  if (first <= last) {
+    const rows = sh.getRange(first, 1, last - first + 1, KS.COL_STATUS).getValues();
+    kunjungan = ksRingkasanDariRows_(rows);
+  }
+  const h = ksRingkasanHalaqoh_();
+  return {
+    total: kunjungan.total + h.total,
+    dipakai: kunjungan.dipakai + h.dipakai,
+    totalKunjungan: kunjungan.total,
+    dipakaiKunjungan: kunjungan.dipakai,
+    totalHalaqoh: h.total,
+    dipakaiHalaqoh: h.dipakai
+  };
 }
 
 function ksRingkasanDariRows_(rows) {
@@ -448,17 +625,32 @@ function buatDokumenCetakQRSantri() {
 
 function resetKonsultasiSantri() {
   const ui = SpreadsheetApp.getUi();
-  const jawab = ui.alert('Reset check-in konsultasi?', 'Semua status santri akan kembali menjadi BELUM dan waktu scan dikosongkan. Lakukan hanya sebelum kegiatan.', ui.ButtonSet.YES_NO);
+  const jawab = ui.alert('Reset status check-in?', 'Status dan waktu scan Kunjungan serta Halaqoh akan direset. Kode QR tidak diubah. Lakukan hanya sebelum kegiatan.', ui.ButtonSet.YES_NO);
   if (jawab !== ui.Button.YES) return;
+
   const sh = ksSheet_(), last = sh.getLastRow(), first = ksCariBarisDataPertama_(sh);
-  if (first > last) return;
-  const n = last - first + 1, rows = sh.getRange(first, 1, n, KS.COL_KODE).getValues();
-  const status = rows.map(r => [ksAdalahBarisSantri_(r) ? 'BELUM' : (r[KS.COL_STATUS - 1] || '')]);
-  const waktu = rows.map(r => [ksAdalahBarisSantri_(r) ? '' : (r[KS.COL_WAKTU - 1] || '')]);
-  sh.getRange(first, KS.COL_STATUS, n, 1).setValues(status);
-  sh.getRange(first, KS.COL_WAKTU, n, 1).setValues(waktu);
+  if (first <= last) {
+    const n = last - first + 1, rows = sh.getRange(first, 1, n, KS.COL_KODE).getValues();
+    const status = rows.map(r => [ksAdalahBarisSantri_(r) ? 'BELUM' : (r[KS.COL_STATUS - 1] || '')]);
+    const waktu = rows.map(r => [ksAdalahBarisSantri_(r) ? '' : (r[KS.COL_WAKTU - 1] || '')]);
+    sh.getRange(first, KS.COL_STATUS, n, 1).setValues(status);
+    sh.getRange(first, KS.COL_WAKTU, n, 1).setValues(waktu);
+  }
+
+  const h = ksHalaqohSheet_();
+  if (h) {
+    const lastH = h.getLastRow();
+    if (lastH >= KS.HALAQOH_DATA_START_ROW) {
+      const nH = lastH - KS.HALAQOH_DATA_START_ROW + 1;
+      const rowsH = h.getRange(KS.HALAQOH_DATA_START_ROW, 1, nH, KS.HALAQOH_COL_STATUS).getValues();
+      const statusH = rowsH.map(r => [String(r[KS.HALAQOH_COL_SANTRI - 1] || '').trim() ? 'BELUM' : (r[KS.HALAQOH_COL_STATUS - 1] || '')]);
+      const waktuH = rowsH.map(r => [String(r[KS.HALAQOH_COL_SANTRI - 1] || '').trim() ? '' : (r[KS.HALAQOH_COL_WAKTU_SCAN - 1] || '')]);
+      h.getRange(KS.HALAQOH_DATA_START_ROW, KS.HALAQOH_COL_STATUS, nH, 1).setValues(statusH);
+      h.getRange(KS.HALAQOH_DATA_START_ROW, KS.HALAQOH_COL_WAKTU_SCAN, nH, 1).setValues(waktuH);
+    }
+  }
   CacheService.getScriptCache().remove(KS.CACHE_LAST_KEY);
-  SpreadsheetApp.getActiveSpreadsheet().toast('Status konsultasi direset.', 'Konsultasi Santri', 5);
+  SpreadsheetApp.getActiveSpreadsheet().toast('Status Kunjungan dan Halaqoh direset.', 'Konsultasi Santri', 5);
 }
 
 function ksPinValid_(pin) {
