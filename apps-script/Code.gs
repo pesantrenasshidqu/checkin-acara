@@ -44,6 +44,7 @@ function onOpen() {
     .addItem('2. Siapkan data Halaqoh & QR', 'siapkanDataHalaqoh')
     .addItem('Cetak semua QR Kunjungan ke Google Docs', 'buatDokumenCetakQRSantri')
     .addItem('Cetak semua QR Halaqoh ke Google Docs', 'buatDokumenCetakQRHalaqoh')
+    .addItem('Simpan QR Tahfidz & Halaqoh ke Drive (per kelas)', 'simpanQrTahfidzHalaqohKeDrive')
     .addItem('Atur PIN petugas', 'aturPinKonsultasiSantri')
     .addSeparator()
     .addItem('Reset status scan (sebelum acara)', 'resetKonsultasiSantri')
@@ -843,3 +844,149 @@ function ksSheet_() {
 function ksJson_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
+
+
+/**
+ * Menyimpan semua gambar QR dalam satu folder Drive:
+ * QR Santri - Tahfidz dan Halaqoh/
+ *   Tahfidz/<kelas>/<nama - kode>.png
+ *   Halaqoh/<kelas>/<nama - kode>.png
+ *
+ * Sumber Tahfidz: tab Sheet1 yang saat ini dipakai sistem QR utama (A=nama, E=kelas, J=kode KS-).
+ * Sumber Halaqoh: tab Permohonan Halaqoh (C=nama, D=kelas, M=kode HQ-).
+ * Fungsi hanya membuat file gambar QR; tidak mengubah kode atau status scan.
+ */
+function simpanQrTahfidzHalaqohKeDrive() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) throw new Error('Buka fungsi ini dari spreadsheet utama melalui Extensions > Apps Script.');
+
+  const shTahfidz = ss.getSheetByName(KS.SHEET_NAME);
+  const shHalaqoh = ksHalaqohSheet_();
+  if (!shTahfidz) throw new Error('Tab sumber QR Tahfidz "' + KS.SHEET_NAME + '" tidak ditemukan.');
+  if (!shHalaqoh) throw new Error('Tab "Permohonan Halaqoh" belum ada. Salin tab Halaqoh ke spreadsheet utama terlebih dahulu.');
+
+  const items = [];
+  const firstT = ksCariBarisDataPertama_(shTahfidz);
+  const lastT = shTahfidz.getLastRow();
+  if (firstT <= lastT) {
+    const rows = shTahfidz.getRange(firstT, 1, lastT - firstT + 1, KS.COL_KODE).getDisplayValues();
+    rows.forEach(function(r, i) {
+      if (!ksAdalahBarisSantri_(r)) return;
+      const nama = String(r[KS.COL_SANTRI - 1] || '').trim();
+      const kelas = String(r[KS.COL_KELAS - 1] || '').trim() || 'Tanpa Kelas';
+      const kode = String(r[KS.COL_KODE - 1] || '').trim().toUpperCase();
+      if (!/^KS-[A-Z0-9]{12}$/.test(kode)) {
+        throw new Error('Kode QR Tahfidz belum valid untuk "' + nama + '" (baris ' + (firstT + i) + '). Jalankan persiapan QR Kunjungan lebih dahulu.');
+      }
+      items.push({jenis:'Tahfidz', nama:nama, kelas:kelas, kode:kode});
+    });
+  }
+
+  const firstH = KS.HALAQOH_DATA_START_ROW;
+  const lastH = shHalaqoh.getLastRow();
+  if (lastH >= firstH) {
+    const rows = shHalaqoh.getRange(firstH, 1, lastH - firstH + 1, KS.HALAQOH_COL_KODE).getDisplayValues();
+    rows.forEach(function(r, i) {
+      const nama = String(r[KS.HALAQOH_COL_SANTRI - 1] || '').trim();
+      if (!nama) return;
+      const kelas = String(r[KS.HALAQOH_COL_KELAS - 1] || '').trim() || 'Tanpa Kelas';
+      const kode = String(r[KS.HALAQOH_COL_KODE - 1] || '').trim().toUpperCase();
+      if (!/^HQ-[A-Z0-9]{12}$/.test(kode)) {
+        throw new Error('Kode QR Halaqoh belum valid untuk "' + nama + '" (baris ' + (firstH + i) + '). Jalankan "Siapkan data Halaqoh & QR" lebih dahulu.');
+      }
+      items.push({jenis:'Halaqoh', nama:nama, kelas:kelas, kode:kode});
+    });
+  }
+
+  if (!items.length) {
+    SpreadsheetApp.getUi().alert('Belum ada QR', 'Tidak ditemukan data QR Tahfidz maupun Halaqoh yang siap disimpan.', SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
+
+  const props = PropertiesService.getScriptProperties();
+  const rootKey = 'QR_TAHFIDZ_HAL AQOH_DRIVE_FOLDER_ID'.replace(' ', '');
+  let root = null;
+  const savedId = props.getProperty(rootKey);
+  if (savedId) {
+    try { root = DriveApp.getFolderById(savedId); } catch (e) { root = null; }
+  }
+  if (!root) {
+    const existing = DriveApp.getFoldersByName('QR Santri - Tahfidz dan Halaqoh');
+    root = existing.hasNext() ? existing.next() : DriveApp.createFolder('QR Santri - Tahfidz dan Halaqoh');
+    props.setProperty(rootKey, root.getId());
+  }
+
+  function getOrCreateFolder(parent, name) {
+    const iter = parent.getFoldersByName(name);
+    return iter.hasNext() ? iter.next() : parent.createFolder(name);
+  }
+  function safeName(name) {
+    return String(name || '').replace(/[\\\\/:*?"<>|]/g, ' ').replace(/[\\r\\n\\t]+/g, ' ').replace(/\\s+/g, ' ').trim().substring(0, 90) || 'Tanpa Nama';
+  }
+
+  // Buat direktori kategori/kelas dan cache file yang telah ada supaya eksekusi ulang tidak menggandakan QR.
+  const folderCache = {};
+  const existingFiles = {};
+  const todo = [];
+  let dilewati = 0;
+  items.forEach(function(item) {
+    const category = getOrCreateFolder(root, item.jenis);
+    const classFolderName = safeName(item.kelas);
+    const folderKey = item.jenis + '/' + classFolderName;
+    if (!folderCache[folderKey]) folderCache[folderKey] = getOrCreateFolder(category, classFolderName);
+    const filename = safeName(item.nama) + ' - ' + item.kode + '.png';
+    if (!existingFiles[folderKey]) {
+      existingFiles[folderKey] = {};
+      const files = folderCache[folderKey].getFiles();
+      while (files.hasNext()) existingFiles[folderKey][files.next().getName()] = true;
+    }
+    if (existingFiles[folderKey][filename]) {
+      dilewati++;
+      return;
+    }
+    todo.push({item:item, folderKey:folderKey, filename:filename});
+    // Reserve the filename for the current run; avoid duplicates if rows are repeated.
+    existingFiles[folderKey][filename] = true;
+  });
+
+  let dibuatTahfidz = 0, dibuatHalaqoh = 0;
+  const BATCH = 20;
+  ss.toast('Menyiapkan gambar QR dan folder Drive...', 'QR Tahfidz & Halaqoh', 20);
+  for (let start = 0; start < todo.length; start += BATCH) {
+    const batch = todo.slice(start, start + BATCH);
+    const requests = batch.map(function(x) {
+      return {url: KS.QR_BASE + encodeURIComponent(x.item.kode), muteHttpExceptions:true};
+    });
+    let responses;
+    try {
+      responses = UrlFetchApp.fetchAll(requests);
+    } catch (err) {
+      throw new Error('Gagal mengambil gambar QR. Proses sudah membuat ' + (dibuatTahfidz + dibuatHalaqoh) + ' file. Jalankan menu lagi untuk melanjutkan tanpa menggandakan file yang sudah ada. Detail: ' + err.message);
+    }
+    responses.forEach(function(response, j) {
+      const item = batch[j];
+      if (response.getResponseCode() !== 200 || !/^image\\//i.test(String(response.getHeaders()['Content-Type'] || ''))) {
+        throw new Error('Gambar QR gagal untuk ' + item.item.nama + ' (' + item.item.kode + '). Proses dapat dilanjutkan dengan menjalankan menu lagi.');
+      }
+      const folder = folderCache[item.folderKey];
+      const blob = response.getBlob().setName(item.filename);
+      const file = folder.createFile(blob);
+      file.setDescription('Jenis: ' + item.item.jenis + '\\nNama Santri: ' + item.item.nama + '\\nKelas: ' + item.item.kelas + '\\nKode QR: ' + item.item.kode);
+      if (item.item.jenis === 'Tahfidz') dibuatTahfidz++; else dibuatHalaqoh++;
+    });
+    ss.toast('QR disimpan: ' + (dibuatTahfidz + dibuatHalaqoh) + ' / ' + todo.length, 'QR Tahfidz & Halaqoh', 5);
+  }
+
+  const url = root.getUrl();
+  const html = HtmlService.createHtmlOutput(
+    '<div style="font:14px Arial,sans-serif;padding:20px;color:#0f172a;line-height:1.6">' +
+    '<div style="font-size:20px;font-weight:700;color:#075e45;margin-bottom:8px">Folder QR berhasil disiapkan</div>' +
+    '<p>QR Tahfidz baru: <b>' + dibuatTahfidz + '</b><br>QR Halaqoh baru: <b>' + dibuatHalaqoh + '</b><br>File yang sudah ada dilewati: <b>' + dilewati + '</b></p>' +
+    '<p>Struktur Drive: <b>Tahfidz / kelas</b> dan <b>Halaqoh / kelas</b>. Menjalankan ulang fungsi tidak akan menggandakan file dengan nama yang sama.</p>' +
+    '<p><a style="display:inline-block;background:#087b52;color:white;padding:11px 16px;border-radius:8px;text-decoration:none;font-weight:700" target="_blank" rel="noopener" href="' + url + '">Buka folder Google Drive</a></p>' +
+    '<p style="font-size:12px;color:#64748b">QR dibuat dari kode yang sudah tersimpan; status scan dan data formulir tidak diubah.</p>' +
+    '</div>'
+  ).setWidth(430).setHeight(260);
+  SpreadsheetApp.getUi().showModalDialog(html, 'QR Tahfidz & Halaqoh di Drive');
+}
+
