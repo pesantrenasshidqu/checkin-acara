@@ -84,7 +84,23 @@ Setelah kode terbaru pada `apps-script/Code.gs` disalin ke Apps Script dan disim
 - Dokumen terbuka lewat dialog; di Google Docs pilih **File → Print**.
 - Tombol **Cetak semua QR Kunjungan ke Google Docs** yang lama tetap khusus Kunjungan. Gunakan tombol Halaqoh untuk mencetak data Halaqoh.
 
-## 6. Tautan aplikasi
+## 6. Simpan semua foto QR ke satu folder Google Drive
+
+Di menu spreadsheet **Konsultasi Santri**, pilih **Simpan QR Tahfidz & Halaqoh ke Drive (per kelas)**.
+
+Struktur folder yang dibuat:
+- `QR Santri - Tahfidz dan Halaqoh/Tahfidz/<nama kelas>/`
+- `QR Santri - Tahfidz dan Halaqoh/Halaqoh/<nama kelas>/`
+
+Sumber data:
+- Folder **Tahfidz** membaca tab `Sheet1`: nama santri di kolom A, kelas di kolom E, kode QR di kolom J.
+- Folder **Halaqoh** membaca tab `Permohonan Halaqoh`: nama santri di kolom C, kelas di kolom D, kode QR di kolom M.
+
+Setiap gambar disimpan sebagai PNG dengan format nama `Nama Santri - KODE.png`. Sistem membuat QR dari kode yang sudah ada; kode QR dan status scan tidak diubah. Kalau tombol dijalankan lagi, file dengan nama sama dilewati agar tidak menggandakan gambar. Proses ini memerlukan izin Google Drive dan UrlFetchApp saat pertama kali dijalankan.
+
+Untuk mengaktifkan menu baru, salin seluruh isi `apps-script/Code.gs` terbaru ke project Apps Script yang terikat ke spreadsheet utama, klik **Save**, lalu muat ulang Google Sheets dan beri izin saat diminta.
+
+## 7. Tautan aplikasi
 
 - HP pemindai: https://pesantrenasshidqu.github.io/checkin-acara/konsultasi.html?mode=hp
 - Proyektor: https://pesantrenasshidqu.github.io/checkin-acara/konsultasi.html?mode=layar
