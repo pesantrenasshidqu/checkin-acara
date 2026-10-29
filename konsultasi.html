@@ -132,7 +132,20 @@
       .baris button { flex:1; }
       .rincian-layar { gap:7px; }
     }
-  </style>
+  
+    /* Hasil Halaqoh: pertanyaan panjang ditampilkan utuh dan diberi ruang sendiri. */
+    .rincian > div.item-santri, .rincian-layar > div.item-santri { grid-column:1 / -1; }
+    .rincian > div.item-siapa, .rincian-layar > div.item-siapa { grid-column:auto; }
+    .rincian > div.item-pertanyaan, .rincian-layar > div.item-pertanyaan { grid-column:1 / -1; }
+    .rincian > div.item-waktu, .rincian-layar > div.item-waktu { grid-column:1 / -1; }
+    .rincian .item-pertanyaan span, .rincian-layar .item-pertanyaan span {
+      white-space:pre-wrap; line-height:1.32; overflow-wrap:anywhere;
+      font-size:clamp(15px,1.55vw,23px);
+    }
+    .rincian .item-siapa span, .rincian-layar .item-siapa span {
+      font-size:clamp(17px,1.9vw,28px);
+    }
+</style>
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
@@ -198,6 +211,16 @@
       function item(label, value, extra) {
         return '<div' + (extra ? ' class="' + extra + '"' : '') + '><strong>' + label + '</strong><span>' + esc(value) + '</span></div>';
       }
+      if (r.jenis === 'HALAQOH') {
+        return '<div class="' + c + '">' +
+          item('Nama Santri', r.santri, 'item-santri') +
+          item('Kelas Berapa', r.kelas, 'item-kelas') +
+          item('Siapa yang akan Konsultasi', r.siapaKonsultasi, 'item-siapa') +
+          item('Lokasi Konsultasi', r.lokasiKonsultasi, 'item-lokasi') +
+          item('Pertanyaan yang akan diajukan', r.pertanyaan, 'item-pertanyaan') +
+          item('Jadwal Konsultasi', r.waktuKonsultasi || '08:00 - 09:00 WIB', 'item-waktu') +
+          '</div>';
+      }
       return '<div class="' + c + '">' +
         item('Bpk', r.ayah, 'item-ayah') +
         item('Ibu', r.ibu, 'item-ibu') +
@@ -206,27 +229,31 @@
         item('Kelas', r.kelas, 'item-kelas') +
         '</div>';
     }
-    function headerHasil(icon, title, subtitle) {
+    function headerHasil(icon, title, subtitle, r) {
+      const eyebrow = r && r.jenis === 'HALAQOH' ? 'CHECK-IN HALAQOH' : 'CHECKIN KONSULTASI SANTRI';
       return '<div class="hasil-hero"><div class="hero-icon" aria-hidden="true">' + icon + '</div><div class="hero-copy">' +
-        '<div class="hero-eyebrow">CHECKIN KONSULTASI SANTRI</div><div class="hero-title">' + title + '</div>' +
+        '<div class="hero-eyebrow">' + eyebrow + '</div><div class="hero-title">' + title + '</div>' +
         '<div class="hero-subtitle">' + subtitle + '</div></div></div>';
     }
     function kontenHasil(r, besar) {
+      const isHalaqoh = r.jenis === 'HALAQOH';
       if (r.status === 'VALID') {
-        return headerHasil('✓', 'BOLEH MASUK', 'Identitas wali dan santri berhasil diverifikasi.') +
+        return headerHasil('✓', 'BOLEH MASUK',
+          isHalaqoh ? 'Data pengajuan Halaqoh berhasil diverifikasi.' : 'Identitas wali dan santri berhasil diverifikasi.', r) +
           rincianHTML(r, besar) + '<div class="' + (besar ? 'cta-layar' : 'cta') + '">SILAHKAN MASUK</div>';
       }
       if (r.status === 'SUDAH') {
-        return headerHasil('↻', 'QR SUDAH DIGUNAKAN', 'Status kunjungan ini sudah tercatat sebelumnya.') +
+        return headerHasil('↻', 'QR SUDAH DIGUNAKAN',
+          isHalaqoh ? 'Check-in Halaqoh ini sudah tercatat sebelumnya.' : 'Status kunjungan ini sudah tercatat sebelumnya.', r) +
           '<div class="lencana">SUDAH DISCAN / DIPAKAI</div>' + rincianHTML(r, besar) +
           '<div class="waktu-chip">Check-in pertama: ' + esc(r.waktu || '—') + '</div>';
       }
       if (r.status === 'PALSU') {
-        return headerHasil('!', 'QR TIDAK TERDAFTAR', 'Kode tidak ditemukan pada daftar konsultasi santri.') +
+        return headerHasil('!', 'QR TIDAK TERDAFTAR', 'Kode tidak ditemukan pada daftar Kunjungan atau Halaqoh.', r) +
           (r.kode ? '<div class="kode-ditolak"><span>Kode QR yang terbaca</span><strong>' + esc(r.kode) + '</strong></div>' : '') +
           '<div class="sub-layar status-meta">MOHON PERIKSA QR SANTRI · JANGAN LEWATKAN VERIFIKASI</div>';
       }
-      return headerHasil('×', 'TERJADI GANGGUAN', esc(r.pesan || 'Periksa koneksi dan coba lagi.'));
+      return headerHasil('×', 'TERJADI GANGGUAN', esc(r.pesan || 'Periksa koneksi dan coba lagi.'), r);
     }
     function tampilHP(r) {
       const el = document.getElementById('hasil');
