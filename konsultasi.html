@@ -145,6 +145,104 @@
     .rincian .item-siapa span, .rincian-layar .item-siapa span {
       font-size:clamp(17px,1.9vw,28px);
     }
+
+    /* Mode layar: padatkan hasil Halaqoh agar muat satu frame tanpa scroll vertikal. */
+    #layar.compact-halaqoh {
+      justify-content: center;
+      overflow: hidden;
+      padding: clamp(10px, 1.25vw, 20px);
+    }
+    #layar.compact-halaqoh .hasil-hero {
+      width: min(1060px, 100%);
+      gap: 14px;
+      margin: 0 auto 8px;
+    }
+    #layar.compact-halaqoh .hero-icon {
+      flex: 0 0 clamp(52px, 5vw, 74px);
+      width: clamp(52px, 5vw, 74px);
+      height: clamp(52px, 5vw, 74px);
+      border-radius: 18px;
+      font-size: clamp(32px, 3.3vw, 48px);
+    }
+    #layar.compact-halaqoh .hero-eyebrow {
+      margin-bottom: 3px;
+      font-size: clamp(9px, .8vw, 12px);
+    }
+    #layar.compact-halaqoh .hero-title {
+      font-size: clamp(27px, 2.65vw, 43px);
+      line-height: 1;
+    }
+    #layar.compact-halaqoh .hero-subtitle {
+      margin-top: 4px;
+      font-size: clamp(12px, 1.15vw, 17px);
+    }
+    #layar.compact-halaqoh .rincian-layar {
+      width: min(1180px, 100%);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin: 8px auto 0;
+      line-height: 1.15;
+    }
+    #layar.compact-halaqoh .rincian-layar > div {
+      min-height: 0;
+      padding: 10px 13px;
+      gap: 4px;
+      border-radius: 13px;
+      border-left-width: 3px;
+    }
+    #layar.compact-halaqoh .rincian-layar strong {
+      font-size: clamp(9px, .78vw, 12px);
+      letter-spacing: .08em;
+    }
+    #layar.compact-halaqoh .rincian-layar span {
+      font-size: clamp(15px, 1.35vw, 21px);
+      line-height: 1.16;
+    }
+    #layar.compact-halaqoh .rincian-layar > div.item-santri,
+    #layar.compact-halaqoh .rincian-layar > div.item-pertanyaan,
+    #layar.compact-halaqoh .rincian-layar > div.item-waktu {
+      grid-column: 1 / -1;
+    }
+    #layar.compact-halaqoh .rincian-layar > div.item-siapa,
+    #layar.compact-halaqoh .rincian-layar > div.item-kelas,
+    #layar.compact-halaqoh .rincian-layar > div.item-lokasi {
+      grid-column: auto;
+    }
+    #layar.compact-halaqoh .rincian-layar .item-pertanyaan span {
+      font-size: clamp(13px, 1.12vw, 17px);
+      line-height: 1.2;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    #layar.compact-halaqoh .rincian-layar .item-waktu span {
+      font-size: clamp(15px, 1.35vw, 21px);
+    }
+    #layar.compact-halaqoh .cta-layar {
+      width: min(700px, 100%);
+      margin: 10px auto 0;
+      padding: 11px 18px;
+      border-radius: 13px;
+      gap: 8px;
+      font-size: clamp(21px, 2.35vw, 36px);
+    }
+    @media (max-height: 760px) and (min-width: 601px) {
+      #layar.compact-halaqoh { padding: 7px 16px; }
+      #layar.compact-halaqoh .hasil-hero { margin-bottom: 5px; }
+      #layar.compact-halaqoh .rincian-layar { gap: 6px; margin-top: 5px; }
+      #layar.compact-halaqoh .rincian-layar > div { padding: 7px 10px; }
+      #layar.compact-halaqoh .cta-layar { margin-top: 6px; padding: 8px 14px; }
+    }
+    @media (max-width: 600px) {
+      #layar.compact-halaqoh { overflow: auto; justify-content: flex-start; }
+      #layar.compact-halaqoh .rincian-layar { grid-template-columns: 1fr; }
+      #layar.compact-halaqoh .rincian-layar > div.item-santri,
+      #layar.compact-halaqoh .rincian-layar > div.item-pertanyaan,
+      #layar.compact-halaqoh .rincian-layar > div.item-waktu,
+      #layar.compact-halaqoh .rincian-layar > div.item-siapa,
+      #layar.compact-halaqoh .rincian-layar > div.item-kelas,
+      #layar.compact-halaqoh .rincian-layar > div.item-lokasi { grid-column: auto; }
+    }
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
@@ -269,7 +367,7 @@
     }
     function tampilLayar(r) {
       const el = document.getElementById('layar');
-      el.className = 'aktif ' + kelasStatus(r);
+      el.className = 'aktif ' + kelasStatus(r) + (r.jenis === 'HALAQOH' ? ' compact-halaqoh' : '');
       el.innerHTML = '<button type="button" class="tutup" aria-label="Tutup hasil">×</button>' + kontenHasil(r, true);
       el.querySelector('.tutup').addEventListener('click', tutupLayar);
       updateStat(r);
