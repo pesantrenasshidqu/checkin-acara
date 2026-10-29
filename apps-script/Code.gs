@@ -532,7 +532,7 @@ function buatDokumenCetakQRHalaqoh() {
       throw new Error('Gagal mengambil gambar QR Halaqoh. Periksa koneksi internet, lalu coba lagi. Detail: ' + err.message);
     }
     responses.forEach(function(response, j) {
-      if (response.getResponseCode() !== 200 || !/^image\//i.test(String(response.getHeaders()['Content-Type'] || ''))) {
+      if (response.getResponseCode() !== 200 || String(response.getHeaders()['Content-Type'] || '').toLowerCase().indexOf('image/') !== 0) {
         throw new Error('Gambar QR gagal dibuat untuk kode ' + batch[j].kode + '. Coba lagi setelah koneksi stabil.');
       }
       blobs.push(response.getBlob().setName('QR-' + batch[j].kode + '.png'));
@@ -697,7 +697,7 @@ function buatDokumenCetakQRSantri() {
       throw new Error('Gagal mengambil gambar QR dari layanan QR. Periksa koneksi internet, lalu coba lagi. Detail: ' + err.message);
     }
     responses.forEach(function(response, j) {
-      if (response.getResponseCode() !== 200 || !/^image\//i.test(String(response.getHeaders()['Content-Type'] || ''))) {
+      if (response.getResponseCode() !== 200 || String(response.getHeaders()['Content-Type'] || '').toLowerCase().indexOf('image/') !== 0) {
         throw new Error('Gambar QR gagal dibuat untuk kode ' + batch[j].kode + '. Periksa koneksi internet atau layanan QR, lalu coba lagi.');
       }
       blobs.push(response.getBlob().setName('QR-' + batch[j].kode + '.png'));
@@ -904,7 +904,7 @@ function simpanQrTahfidzHalaqohKeDrive() {
   }
 
   const props = PropertiesService.getScriptProperties();
-  const rootKey = 'QR_TAHFIDZ_HAL AQOH_DRIVE_FOLDER_ID'.replace(' ', '');
+  const rootKey = 'QR_TAHFIDZ_HALAQOH_DRIVE_FOLDER_ID';
   let root = null;
   const savedId = props.getProperty(rootKey);
   if (savedId) {
@@ -921,7 +921,12 @@ function simpanQrTahfidzHalaqohKeDrive() {
     return iter.hasNext() ? iter.next() : parent.createFolder(name);
   }
   function safeName(name) {
-    return String(name || '').replace(/[\\\\/:*?"<>|]/g, ' ').replace(/[\\r\\n\\t]+/g, ' ').replace(/\\s+/g, ' ').trim().substring(0, 90) || 'Tanpa Nama';
+    return String(name || '')
+      .replace(/\\/g, ' ')
+      .replace(/[/:*?"<>|]/g, ' ')
+      .replace(/[\r\n\t]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim().substring(0, 90) || 'Tanpa Nama';
   }
 
   // Buat direktori kategori/kelas dan cache file yang telah ada supaya eksekusi ulang tidak menggandakan QR.
@@ -965,13 +970,13 @@ function simpanQrTahfidzHalaqohKeDrive() {
     }
     responses.forEach(function(response, j) {
       const item = batch[j];
-      if (response.getResponseCode() !== 200 || !/^image\\//i.test(String(response.getHeaders()['Content-Type'] || ''))) {
+      if (response.getResponseCode() !== 200 || String(response.getHeaders()['Content-Type'] || '').toLowerCase().indexOf('image/') !== 0) {
         throw new Error('Gambar QR gagal untuk ' + item.item.nama + ' (' + item.item.kode + '). Proses dapat dilanjutkan dengan menjalankan menu lagi.');
       }
       const folder = folderCache[item.folderKey];
       const blob = response.getBlob().setName(item.filename);
       const file = folder.createFile(blob);
-      file.setDescription('Jenis: ' + item.item.jenis + '\\nNama Santri: ' + item.item.nama + '\\nKelas: ' + item.item.kelas + '\\nKode QR: ' + item.item.kode);
+      file.setDescription(['Jenis: ' + item.item.jenis, 'Nama Santri: ' + item.item.nama, 'Kelas: ' + item.item.kelas, 'Kode QR: ' + item.item.kode].join('\n'));
       if (item.item.jenis === 'Tahfidz') dibuatTahfidz++; else dibuatHalaqoh++;
     });
     ss.toast('QR disimpan: ' + (dibuatTahfidz + dibuatHalaqoh) + ' / ' + todo.length, 'QR Tahfidz & Halaqoh', 5);
