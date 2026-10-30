@@ -344,6 +344,93 @@
       #layar.compact-halaqoh .waktu-chip { margin-top: 8px; padding: 9px 16px; }
     }
 
+
+    /* Halaqoh: tanpa kartu pertanyaan pada layar hasil; perbesar informasi utama dan CTA. */
+    @media (min-width: 601px) {
+      #layar.compact-halaqoh .hasil-hero {
+        margin-bottom: clamp(14px, 1.5vh, 22px);
+        gap: clamp(18px, 1.8vw, 30px);
+      }
+      #layar.compact-halaqoh .hero-icon {
+        flex-basis: clamp(78px, 6.5vw, 112px);
+        width: clamp(78px, 6.5vw, 112px);
+        height: clamp(78px, 6.5vw, 112px);
+        border-radius: 25px;
+        font-size: clamp(48px, 4.7vw, 72px);
+      }
+      #layar.compact-halaqoh .hero-eyebrow {
+        font-size: clamp(13px, 1.05vw, 17px);
+        margin-bottom: 7px;
+      }
+      #layar.compact-halaqoh .hero-title {
+        font-size: clamp(43px, 4.25vw, 70px);
+      }
+      #layar.compact-halaqoh .hero-subtitle {
+        font-size: clamp(17px, 1.55vw, 25px);
+        margin-top: 8px;
+      }
+      #layar.compact-halaqoh .rincian-layar {
+        width: min(1420px, calc(100vw - 100px));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: clamp(11px, .9vw, 16px);
+        margin-top: clamp(14px, 1.5vh, 22px);
+      }
+      #layar.compact-halaqoh .rincian-layar > div {
+        min-height: clamp(100px, 10vh, 132px);
+        padding: clamp(17px, 1.35vw, 23px) clamp(18px, 1.4vw, 25px);
+        gap: 9px;
+        border-radius: 18px;
+        border-left-width: 5px;
+      }
+      #layar.compact-halaqoh .rincian-layar > div.item-santri {
+        grid-column: 1 / -1;
+      }
+      #layar.compact-halaqoh .rincian-layar > div.item-kelas,
+      #layar.compact-halaqoh .rincian-layar > div.item-siapa,
+      #layar.compact-halaqoh .rincian-layar > div.item-lokasi {
+        grid-column: auto;
+      }
+      #layar.compact-halaqoh .rincian-layar strong {
+        font-size: clamp(13px, 1.05vw, 17px);
+        letter-spacing: .11em;
+      }
+      #layar.compact-halaqoh .rincian-layar span {
+        font-size: clamp(21px, 1.9vw, 31px);
+        line-height: 1.22;
+      }
+      #layar.compact-halaqoh .rincian-layar > div.item-santri span {
+        font-size: clamp(27px, 2.5vw, 40px);
+      }
+      #layar.compact-halaqoh .rincian-layar > div.item-waktu {
+        grid-column: 1 / -1;
+        min-height: clamp(85px, 8.5vh, 112px);
+      }
+      #layar.compact-halaqoh .rincian-layar > div.item-waktu span {
+        font-size: clamp(24px, 2.1vw, 34px);
+      }
+      #layar.compact-halaqoh .cta-layar {
+        width: min(1050px, 94%);
+        margin-top: clamp(16px, 1.7vh, 25px);
+        padding: clamp(17px, 1.55vw, 25px) 26px;
+        border-radius: 19px;
+        font-size: clamp(36px, 3.45vw, 56px);
+        gap: 13px;
+      }
+      #layar.compact-halaqoh .waktu-chip {
+        margin-top: 16px;
+        padding: 14px 24px;
+        font-size: clamp(17px, 1.5vw, 24px);
+      }
+    }
+    @media (min-width: 601px) and (max-height: 760px) {
+      #layar.compact-halaqoh .hasil-hero { margin-bottom: 8px; }
+      #layar.compact-halaqoh .rincian-layar { margin-top: 8px; gap: 8px; }
+      #layar.compact-halaqoh .rincian-layar > div { min-height: 76px; padding: 11px 15px; gap: 6px; }
+      #layar.compact-halaqoh .rincian-layar > div.item-waktu { min-height: 68px; }
+      #layar.compact-halaqoh .cta-layar { margin-top: 9px; padding: 11px 20px; }
+      #layar.compact-halaqoh .waktu-chip { margin-top: 9px; padding: 10px 17px; }
+    }
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
@@ -416,7 +503,6 @@
           item('Kelas Berapa', r.kelas, 'item-kelas') +
           item('Siapa yang akan Konsultasi', r.siapaKonsultasi, 'item-siapa') +
           item('Lokasi Konsultasi', r.lokasiKonsultasi, 'item-lokasi') +
-          item('Pertanyaan yang akan diajukan', r.pertanyaan, 'item-pertanyaan') +
           item('Jadwal Konsultasi', r.waktuKonsultasi || '08:00 - 09:00 WIB', 'item-waktu') +
           '</div>';
       }
