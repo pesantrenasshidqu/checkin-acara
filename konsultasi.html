@@ -547,10 +547,7 @@
       updateStat(r);
       bunyi(r.status);
       if (navigator.vibrate) navigator.vibrate(r.status === 'VALID' ? 140 : [180,80,180]);
-      if (MODE === 'hp') {
-        clearTimeout(timerHasilHP);
-        timerHasilHP = setTimeout(function() { idleHP(); }, r.status === 'VALID' ? 3500 : 4000);
-      }
+      // Hasil scan dibiarkan tampil; tidak ada force close otomatis di mode HP.
     }
     function tampilLayar(r) {
       const el = document.getElementById('layar');
@@ -559,8 +556,7 @@
       el.querySelector('.tutup').addEventListener('click', tutupLayar);
       updateStat(r);
       bunyi(r.status);
-      clearTimeout(timerLayar);
-      timerLayar = setTimeout(tutupLayar, WAKTU_TUTUP_LAYAR);
+      // Hasil scan dibiarkan tampil sampai ditutup manual atau digantikan hasil scan berikutnya.
     }
     function tutupLayar() {
       clearTimeout(timerLayar);
