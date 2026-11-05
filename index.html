@@ -324,6 +324,58 @@
   let waktuTerakhir = 0;
   let idTampil = null;
 
+  // ---------- Pengecekan instan di HP (daftar tamu disimpan di memori halaman) ----------
+  let DAFTAR = {};
+  let MAKS = 10;
+  let siapLokal = false;
+
+  function muatDaftar() {
+    api('daftar', { pin: pin })
+      .then(function (r) {
+        if (r && r.status === 'OK') {
+          MAKS = r.maks;
+          const d = {};
+          r.baris.forEach(function (b) { d[b[0]] = b; });
+          DAFTAR = d;
+          siapLokal = true;
+        }
+      })
+      .catch(function () {});
+  }
+
+  function fmtWaktu(ms) {
+    if (!ms) return '-';
+    const d = new Date(ms);
+    const p = function (n) { return String(n).padStart(2, '0'); };
+    return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds()) + ', ' +
+      p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear();
+  }
+
+  // b = [kode, nama, santri, kelas, kategori, foto, jumlah, waktu1, waktu2]
+  function hasilLokal(kode) {
+    const b = DAFTAR[kode];
+    if (!b) return { status: 'PALSU' };
+    const info = { nama: b[1], santri: b[2], kelas: b[3], kategori: b[4], foto: b[5], maks: MAKS };
+    const n = b[6];
+    if (n >= MAKS) return Object.assign({ status: 'SUDAH', jumlah: n, waktu: fmtWaktu(b[7]), waktu2: fmtWaktu(b[8]) }, info);
+    b[6] = n + 1;
+    if (n === 0) b[7] = Date.now(); else b[8] = Date.now();
+    return Object.assign({ status: 'VALID', ke: n + 1 }, info);
+  }
+
+  function getar(r) {
+    if (navigator.vibrate) navigator.vibrate(r.status === 'VALID' ? 150 : [200, 100, 200]);
+  }
+
+  // Kirim ke server; bila gagal (sinyal putus) dicoba ulang sampai 5 kali
+  function kirimCek(kode, cobaKe) {
+    return api('cek', { kode: kode, pin: pin }).catch(function (e) {
+      if (cobaKe >= 5) throw e;
+      return new Promise(function (ok) { setTimeout(ok, 2000); })
+        .then(function () { return kirimCek(kode, cobaKe + 1); });
+    });
+  }
+
   function masuk() {
     siapkanSuara();
     pin = document.getElementById('pin').value;
@@ -335,6 +387,7 @@
         document.getElementById('app').hidden = false;
         isiStat(r);
         tampilIdle();
+        if (MODE !== 'layar') { muatDaftar(); setInterval(muatDaftar, 10000); }
         if (MODE === 'layar') pantau(); else mulaiKamera();
       })
       .catch(function (e) { alert('Gagal terhubung ke server: ' + e.message); });
@@ -363,7 +416,7 @@
         } else if (idTampil === null) {
           idTampil = 0;
         }
-        setTimeout(pantau, 1500);
+        setTimeout(pantau, 1000);
       })
       .catch(function () { setTimeout(pantau, 4000); });
   }
@@ -436,17 +489,36 @@
     sibuk = true;
     kodeTerakhir = kode;
     waktuTerakhir = sekarang;
-    tampil({ status: 'LOADING' });
 
-    api('cek', { kode: kode, pin: pin })
+    // Tampilkan hasil SEKETIKA dari daftar lokal (jika sudah termuat)
+    const lokal = siapLokal ? hasilLokal(kode.toUpperCase()) : null;
+    if (lokal) {
+      tampil(lokal);
+      getar(lokal);
+      if (MODE === 'hp') setTimeout(tutupLayar, 2500);
+    } else {
+      tampil({ status: 'LOADING' });
+    }
+
+    // Catat ke server di latar belakang
+    kirimCek(kode, 0)
       .then(function (r) {
-        tampil(r);
-        if (navigator.vibrate) navigator.vibrate(r.status === 'VALID' ? 150 : [200, 100, 200]);
-        if (MODE === 'hp') setTimeout(tutupLayar, 2500);
+        const b = DAFTAR[kode.toUpperCase()];
+        if (b && r.ke) b[6] = r.ke;
+        else if (b && r.jumlah) b[6] = r.jumlah;
+
+        if (!lokal || r.status !== lokal.status) {
+          // Server berbeda dari dugaan lokal (misalnya HP lain sudah scan): ikuti server
+          tampil(r);
+          getar(r);
+          if (MODE === 'hp') setTimeout(tutupLayar, 2500);
+        } else {
+          isiStat(r);
+        }
       })
       .catch(function (e) {
-        tampil({ status: 'ERROR', pesan: 'Gagal: ' + e.message });
-        if (MODE === 'hp') setTimeout(tutupLayar, 3000);
+        tampil({ status: 'ERROR', pesan: 'Gagal menyimpan ke server: ' + e.message + '. Cek sinyal, lalu scan ulang.' });
+        if (MODE === 'hp') setTimeout(tutupLayar, 4000);
       });
   }
 
