@@ -152,6 +152,16 @@
   // Suara saat scan: true = hidup, false = mati
   const SUARA_HP = true;
   const SUARA_LAYAR = true;
+  // Popup hasil scan layar penuh (laptop/proyektor dan mode satu perangkat):
+  // ditutup otomatis setelah berapa detik? Isi 0 jika hanya boleh ditutup dengan tombol X.
+  const TUTUP_OTOMATIS_LAYAR = 5;
+  // Khusus HP petugas (?mode=hp): HP baru bisa scan lagi setelah hasil ditutup, jadi minimal 1 detik.
+  const TUTUP_OTOMATIS_HP = 2.5;
+  // Jalur cepat HP -> layar lewat Firebase Realtime Database (gratis). Kosongkan ('') untuk memakai cara lama (polling).
+  // Isi dengan alamat database, contoh: 'https://nama-proyek-default-rtdb.asia-southeast1.firebasedatabase.app'
+  const FIREBASE_URL = '';
+  // Kunci acak penentu jalur data (HP dan layar harus sama). Boleh diganti dengan teks acak lain.
+  const KUNCI_LAYAR = 'k7Qm2xVt9RpA4wLz';
   const VIDEO_LATAR_MP4 = 'latar-kepulangan.mp4'; // unggah di folder yang sama dengan index.html dan pulang.html
   // ================================
 
@@ -323,6 +333,7 @@
   let kodeTerakhir = '';
   let waktuTerakhir = 0;
   let idTampil = null;
+  let timerTutup = null;
 
   // ---------- Pengecekan instan di HP (daftar tamu disimpan di memori halaman) ----------
   let DAFTAR = {};
@@ -367,6 +378,36 @@
     if (navigator.vibrate) navigator.vibrate(r.status === 'VALID' ? 150 : [200, 100, 200]);
   }
 
+  // ---------- Jalur cepat ke layar (Firebase) ----------
+  function urlSiar() {
+    return FIREBASE_URL.replace(/\/$/, '') + '/layar/' + KUNCI_LAYAR + '.json';
+  }
+
+  // HP: kirim hasil scan ke layar. Bila id sama dikirim ulang (setelah server menjawab), layar hanya memperbarui statistik.
+  function publikasi(r, id) {
+    if (!FIREBASE_URL || MODE !== 'hp') return;
+    try {
+      fetch(urlSiar(), { method: 'PUT', body: JSON.stringify(Object.assign({}, r, { id: id })) }).catch(function () {});
+    } catch (e) {}
+  }
+
+  // Layar: mendengarkan hasil scan secara langsung (tanpa polling)
+  function dengarFirebase() {
+    let pertama = true;
+    const es = new EventSource(urlSiar());
+    es.addEventListener('put', function (ev) {
+      let m;
+      try { m = JSON.parse(ev.data); } catch (e) { return; }
+      const r = m && m.data;
+      catatSambung(true);
+      if (!r || !r.id) { pertama = false; if (idTampil === null) idTampil = 0; return; }
+      if (pertama) { pertama = false; idTampil = r.id; return; }   // hasil lama saat halaman dibuka: tidak ditampilkan
+      if (r.id !== idTampil) { idTampil = r.id; tampil(r); } else { isiStat(r); }
+    });
+    es.addEventListener('keep-alive', function () { catatSambung(true); });
+    es.onerror = function () { catatSambung(false); };
+  }
+
   // Kirim ke server; bila gagal (sinyal putus) dicoba ulang sampai 5 kali
   function kirimCek(kode, cobaKe) {
     return api('cek', { kode: kode, pin: pin }).catch(function (e) {
@@ -388,7 +429,7 @@
         isiStat(r);
         tampilIdle();
         if (MODE !== 'layar') { muatDaftar(); setInterval(muatDaftar, 10000); }
-        if (MODE === 'layar') pantau(); else mulaiKamera();
+        if (MODE === 'layar') { if (FIREBASE_URL) dengarFirebase(); else pantau(); } else mulaiKamera();
       })
       .catch(function (e) { alert('Gagal terhubung ke server: ' + e.message); });
   }
@@ -491,11 +532,12 @@
     waktuTerakhir = sekarang;
 
     // Tampilkan hasil SEKETIKA dari daftar lokal (jika sudah termuat)
+    const idSiar = Date.now() + '_' + Math.random().toString(36).slice(2, 6);
     const lokal = siapLokal ? hasilLokal(kode.toUpperCase()) : null;
     if (lokal) {
+      publikasi(lokal, idSiar);   // layar menerima hasil tanpa menunggu server
       tampil(lokal);
       getar(lokal);
-      if (MODE === 'hp') setTimeout(tutupLayar, 2500);
     } else {
       tampil({ status: 'LOADING' });
     }
@@ -509,16 +551,16 @@
 
         if (!lokal || r.status !== lokal.status) {
           // Server berbeda dari dugaan lokal (misalnya HP lain sudah scan): ikuti server
+          publikasi(r, lokal ? idSiar + 'k' : idSiar);
           tampil(r);
           getar(r);
-          if (MODE === 'hp') setTimeout(tutupLayar, 2500);
         } else {
+          publikasi(r, idSiar);   // id sama: layar hanya memperbarui statistik
           isiStat(r);
         }
       })
       .catch(function (e) {
         tampil({ status: 'ERROR', pesan: 'Gagal menyimpan ke server: ' + e.message + '. Cek sinyal, lalu scan ulang.' });
-        if (MODE === 'hp') setTimeout(tutupLayar, 4000);
       });
   }
 
@@ -606,6 +648,7 @@
   }
 
   function tutupLayar() {
+    clearTimeout(timerTutup);
     document.getElementById('layar').style.display = 'none';
     tampilIdle();
     waktuTerakhir = Date.now();
@@ -734,6 +777,11 @@
     } else {
       box.className = 'kotak ' + warna;
     }
+
+    // Tutup otomatis sesuai pengaturan (hasil baru selalu mengulang hitungan dari awal)
+    clearTimeout(timerTutup);
+    const detik = (MODE === 'hp') ? Math.max(TUTUP_OTOMATIS_HP, 1) : TUTUP_OTOMATIS_LAYAR;
+    if (detik > 0) timerTutup = setTimeout(tutupLayar, detik * 1000);
   }
 </script>
 
