@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- versi 6-nov: logo tertanam -->
+<!-- versi 6-nov: logo tertanam + mode scanner -->
 <html>
 <head>
   <title>Kepulangan Santri — Emerald MP4</title>
@@ -89,6 +89,13 @@
     body.mode-layar h1 { font-size: 40px; }
     body.mode-layar #stat { font-size: 28px; }
     body.mode-layar .kotak { font-size: 28px; padding: 40px 12px; }
+    /* Mode scanner (alat scanner QR) */
+    body.mode-scanner .wrap { max-width: 900px; }
+    body.mode-scanner h1 { font-size: 40px; }
+    body.mode-scanner #stat { font-size: 28px; }
+    body.mode-scanner .kotak { font-size: 28px; padding: 40px 12px; }
+    body.mode-scanner #manual { font-size: 26px; padding: 18px; text-align: center; }
+    body.mode-scanner #manualBaris button { font-size: 22px; padding: 18px 28px; }
     body.mode-layar.berlatar { background-image: none !important; background-color: #022c22 !important; }
     .wrap { position: relative; z-index: 1; }
     .logo-as-shidqu { display: block; width: 118px; max-width: 34vw; height: auto; margin: 8px auto 2px;
@@ -408,7 +415,7 @@
   //   'hp'    = HP petugas untuk scan dan menjawab pertanyaan
   //   'layar' = laptop/proyektor hanya menampilkan hasil dari HP
   const MODE_URL = (new URLSearchParams(location.search).get('mode') || '').toLowerCase();
-  const MODE = (MODE_URL === 'hp' || MODE_URL === 'layar') ? MODE_URL : '';
+  const MODE = (MODE_URL === 'hp' || MODE_URL === 'layar' || MODE_URL === 'scanner') ? MODE_URL : '';
 
   // Komunikasi ke Apps Script (dikirim sebagai teks biasa agar tidak diblokir CORS)
   function api(aksi, data) {
@@ -469,6 +476,38 @@
 
   let pin = '';
   let sibuk = false;
+  // ---------- Mode scanner (alat scanner QR USB / Bluetooth yang bekerja seperti keyboard) ----------
+  // Buka dengan tambahan ?mode=scanner. Kolom input selalu aktif; scanner mengetik kode lalu menekan Enter.
+  let timerAuto = null;
+
+  function fokusScanner() {
+    if (MODE !== 'scanner') return;
+    if (typeof qna !== 'undefined' && qna) return;   // jangan mengganggu pengisian jawaban (halaman kepulangan)
+    document.getElementById('manual').focus();
+  }
+
+  function siapkanScanner() {
+    document.body.classList.add('mode-scanner');
+    document.getElementById('reader').style.display = 'none';
+    document.getElementById('fotoBaris').style.display = 'none';
+    const el = document.getElementById('manual');
+    el.placeholder = 'Arahkan scanner ke QR...';
+    el.setAttribute('autocomplete', 'off');
+    fokusScanner();
+    el.addEventListener('blur', function () { setTimeout(fokusScanner, 120); });
+    document.addEventListener('keydown', function (e) {
+      if (document.activeElement !== el && !e.ctrlKey && !e.metaKey && !e.altKey &&
+          document.activeElement && document.activeElement.tagName !== 'INPUT') fokusScanner();
+    });
+    // Jika scanner tidak mengirim Enter: kode yang bentuknya lengkap dikirim otomatis setelah berhenti mengetik
+    el.addEventListener('input', function () {
+      clearTimeout(timerAuto);
+      timerAuto = setTimeout(function () {
+        if (/^(WS|PL)-[A-Z0-9]{12}$/i.test(el.value.trim())) cekManual();
+      }, 250);
+    });
+  }
+
   let kodeTerakhir = '';
   let waktuTerakhir = 0;
   let idTampil = null;
@@ -486,7 +525,9 @@
         document.getElementById('app').hidden = false;
         isiStat(r);
         tampilIdle();
-        if (MODE === 'layar') pantau(); else { mulaiKamera(); jagaSambungan(); }
+        if (MODE === 'layar') pantau();
+        else if (MODE === 'scanner') { siapkanScanner(); jagaSambungan(); }
+        else { mulaiKamera(); jagaSambungan(); }
       })
       .catch(function (e) { alert('Gagal terhubung ke server: ' + e.message); });
   }
@@ -794,11 +835,12 @@
     box.className = 'kotak';
     box.textContent = (MODE === 'layar')
       ? 'Menunggu santri melakukan scan...'
-      : 'Arahkan kamera ke QR santri';
+      : (MODE === 'scanner' ? 'Siap. Arahkan scanner ke QR santri' : 'Arahkan kamera ke QR santri');
   }
 
   function tutupLayar() {
     clearTimeout(timerTutup);
+    setTimeout(fokusScanner, 0);
     document.getElementById('layar').style.display = 'none';
     qna = null;
     tampilIdle();

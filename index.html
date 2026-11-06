@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- versi 6-nov: logo tertanam -->
+<!-- versi 6-nov: logo tertanam + mode scanner -->
 <html>
 <head>
   <title>Check-in Wali Santri</title>
@@ -58,6 +58,13 @@
     body.mode-layar h1 { font-size: 40px; }
     body.mode-layar #stat { font-size: 28px; }
     body.mode-layar .kotak { font-size: 28px; padding: 40px 12px; }
+    /* Mode scanner (alat scanner QR) */
+    body.mode-scanner .wrap { max-width: 900px; }
+    body.mode-scanner h1 { font-size: 40px; }
+    body.mode-scanner #stat { font-size: 28px; }
+    body.mode-scanner .kotak { font-size: 28px; padding: 40px 12px; }
+    body.mode-scanner #manual { font-size: 26px; padding: 18px; text-align: center; }
+    body.mode-scanner #manualBaris button { font-size: 22px; padding: 18px 28px; }
     body.mode-layar.berlatar { background-image: none !important; background-color: #022c22 !important; }
     /* Video latar MP4: hanya aktif pada mode layar, tidak diunduh oleh HP petugas */
     #videoLatar { position: fixed; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; background: #022c22; }
@@ -158,6 +165,9 @@
   const TUTUP_OTOMATIS_LAYAR = 5;
   // Khusus HP petugas (?mode=hp): HP baru bisa scan lagi setelah hasil ditutup, jadi minimal 1 detik.
   const TUTUP_OTOMATIS_HP = 2.5;
+  // Khusus komputer dengan alat scanner QR (?mode=scanner): popup menutup otomatis setelah berapa detik (0 = hanya tombol X).
+  // Scan berikutnya selalu langsung menggantikan popup yang sedang tampil.
+  const TUTUP_OTOMATIS_SCANNER = 3;
   // Jalur cepat HP -> layar lewat Firebase Realtime Database (gratis). Kosongkan ('') untuk memakai cara lama (polling).
   // Isi dengan alamat database, contoh: 'https://nama-proyek-default-rtdb.asia-southeast1.firebasedatabase.app'
   const FIREBASE_URL = '';
@@ -171,7 +181,7 @@
   //   'hp'    = HP hanya untuk scan (hasil ringkas, tanpa popup)
   //   'layar' = laptop/proyektor hanya menampilkan hasil dari HP
   const MODE_URL = new URLSearchParams(location.search).get('mode');
-  const MODE = (MODE_URL === 'hp' || MODE_URL === 'layar') ? MODE_URL : '';
+  const MODE = (MODE_URL === 'hp' || MODE_URL === 'layar' || MODE_URL === 'scanner') ? MODE_URL : '';
 
   // Komunikasi ke Apps Script (dikirim sebagai teks biasa agar tidak diblokir CORS)
   function api(aksi, data) {
@@ -335,6 +345,38 @@
   let waktuTerakhir = 0;
   let idTampil = null;
   let timerTutup = null;
+  // ---------- Mode scanner (alat scanner QR USB / Bluetooth yang bekerja seperti keyboard) ----------
+  // Buka dengan tambahan ?mode=scanner. Kolom input selalu aktif; scanner mengetik kode lalu menekan Enter.
+  let timerAuto = null;
+
+  function fokusScanner() {
+    if (MODE !== 'scanner') return;
+    if (typeof qna !== 'undefined' && qna) return;   // jangan mengganggu pengisian jawaban (halaman kepulangan)
+    document.getElementById('manual').focus();
+  }
+
+  function siapkanScanner() {
+    document.body.classList.add('mode-scanner');
+    document.getElementById('reader').style.display = 'none';
+    document.getElementById('fotoBaris').style.display = 'none';
+    const el = document.getElementById('manual');
+    el.placeholder = 'Arahkan scanner ke QR...';
+    el.setAttribute('autocomplete', 'off');
+    fokusScanner();
+    el.addEventListener('blur', function () { setTimeout(fokusScanner, 120); });
+    document.addEventListener('keydown', function (e) {
+      if (document.activeElement !== el && !e.ctrlKey && !e.metaKey && !e.altKey &&
+          document.activeElement && document.activeElement.tagName !== 'INPUT') fokusScanner();
+    });
+    // Jika scanner tidak mengirim Enter: kode yang bentuknya lengkap dikirim otomatis setelah berhenti mengetik
+    el.addEventListener('input', function () {
+      clearTimeout(timerAuto);
+      timerAuto = setTimeout(function () {
+        if (/^(WS|PL)-[A-Z0-9]{12}$/i.test(el.value.trim())) cekManual();
+      }, 250);
+    });
+  }
+
 
   // ---------- Pengecekan instan di HP (daftar tamu disimpan di memori halaman) ----------
   let DAFTAR = {};
@@ -386,7 +428,7 @@
 
   // HP: kirim hasil scan ke layar. Bila id sama dikirim ulang (setelah server menjawab), layar hanya memperbarui statistik.
   function publikasi(r, id) {
-    if (!FIREBASE_URL || MODE !== 'hp') return;
+    if (!FIREBASE_URL || (MODE !== 'hp' && MODE !== 'scanner')) return;
     try {
       fetch(urlSiar(), { method: 'PUT', body: JSON.stringify(Object.assign({}, r, { id: id })) }).catch(function () {});
     } catch (e) {}
@@ -430,7 +472,9 @@
         isiStat(r);
         tampilIdle();
         if (MODE !== 'layar') { muatDaftar(); setInterval(muatDaftar, 10000); }
-        if (MODE === 'layar') { if (FIREBASE_URL) dengarFirebase(); else pantau(); } else mulaiKamera();
+        if (MODE === 'layar') { if (FIREBASE_URL) dengarFirebase(); else pantau(); }
+        else if (MODE === 'scanner') siapkanScanner();
+        else mulaiKamera();
       })
       .catch(function (e) { alert('Gagal terhubung ke server: ' + e.message); });
   }
@@ -526,8 +570,8 @@
   function proses(kode) {
     kode = String(kode).trim();
     const sekarang = Date.now();
-    if (sibuk) return;
-    if (kode === kodeTerakhir && sekarang - waktuTerakhir < 8000) return;
+    if (sibuk && MODE !== 'scanner') return;   // mode scanner: scan berikutnya boleh langsung menggantikan hasil sebelumnya
+    if (kode === kodeTerakhir && sekarang - waktuTerakhir < (MODE === 'scanner' ? 3000 : 8000)) return;
     sibuk = true;
     kodeTerakhir = kode;
     waktuTerakhir = sekarang;
@@ -645,11 +689,12 @@
     box.style.boxShadow = '';
     box.textContent = (MODE === 'layar')
       ? 'Menunggu tamu melakukan scan...'
-      : 'Arahkan kamera ke QR code';
+      : (MODE === 'scanner' ? 'Siap. Arahkan scanner ke QR tamu' : 'Arahkan kamera ke QR code');
   }
 
   function tutupLayar() {
     clearTimeout(timerTutup);
+    setTimeout(fokusScanner, 0);
     document.getElementById('layar').style.display = 'none';
     tampilIdle();
     waktuTerakhir = Date.now();
@@ -781,7 +826,8 @@
 
     // Tutup otomatis sesuai pengaturan (hasil baru selalu mengulang hitungan dari awal)
     clearTimeout(timerTutup);
-    const detik = (MODE === 'hp') ? Math.max(TUTUP_OTOMATIS_HP, 1) : TUTUP_OTOMATIS_LAYAR;
+    const detik = (MODE === 'hp') ? Math.max(TUTUP_OTOMATIS_HP, 1)
+      : (MODE === 'scanner' ? TUTUP_OTOMATIS_SCANNER : TUTUP_OTOMATIS_LAYAR);
     if (detik > 0) timerTutup = setTimeout(tutupLayar, detik * 1000);
   }
 </script>
