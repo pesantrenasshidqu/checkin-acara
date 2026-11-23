@@ -6,8 +6,9 @@
 *{box-sizing:border-box}html,body{height:100%}body{margin:0;font-family:system-ui,Arial,sans-serif;color:#fff;background:#0b3d2e center/cover no-repeat fixed}
 #bg{position:fixed;inset:0;z-index:-2;background:#0b3d2e center/cover no-repeat}
 #vid{position:fixed;inset:0;z-index:-1;overflow:hidden;display:none}#vid iframe{position:absolute;top:50%;left:50%;width:177.8vh;min-width:100vw;height:56.25vw;min-height:100vh;transform:translate(-50%,-50%);border:0;pointer-events:none}
+#vid video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 #shade{position:fixed;inset:0;z-index:-1;background:rgba(0,0,0,.45)}
-header{padding:10px 16px;text-align:center}header h1{margin:0;font-size:26px}#st{font-size:12px;opacity:.85;margin-top:2px}
+header{padding:10px 16px;text-align:center}.logo{display:block;width:118px;max-width:34vw;height:auto;margin:0 auto 4px}@media(min-width:900px){.logo{width:148px}}header h1{margin:0;font-size:26px}#st{font-size:12px;opacity:.85;margin-top:2px}
 main{max-width:980px;margin:0 auto;padding:10px 16px 40px}
 #snd{position:fixed;top:10px;left:10px;width:42px;height:42px;border-radius:50%;border:2px solid #fff6;background:#0007;color:#fff;font-size:18px;cursor:pointer}
 input[type=search],input[type=password]{width:100%;font-size:22px;padding:14px;border-radius:12px;border:0}
@@ -23,51 +24,63 @@ input[type=search],input[type=password]{width:100%;font-size:22px;padding:14px;b
 #banner h1{margin:0 0 8px;font-size:clamp(28px,5.5vw,60px);line-height:1.15}#banner .k{font-size:clamp(18px,2.6vw,30px)}
 #banner button{max-width:340px;margin-top:14px;background:#fff;color:#0066AE}#banner .w{font-size:14px;opacity:.85;margin-top:8px}
 table{width:100%;border-collapse:collapse;background:#000a;border-radius:12px;overflow:hidden}td,th{padding:9px 10px;text-align:left;border-bottom:1px solid #fff2}.dim{opacity:.4}
+#res{max-height:70vh;overflow-y:auto}#hasil.bad .box{background:#b91c1c}#hasil .btns button{background:#fff;color:#111;font-size:17px}
 </style></head><body>
 <div id="bg"></div><div id="vid"></div><div id="shade"></div>
 <button id="snd" title="Suara">🔊</button>
-<header><h1 id="ttl"></h1><div id="st"></div></header>
+<header><img class="logo" src="logo-masjid-as-shidqu-white.png" alt="Pesantren As-Shidqu"><h1 id="ttl"></h1><div id="st"></div></header>
 <main id="app"></main>
 <div class="ov" id="lg" style="display:flex"><div class="box"><h2 style="margin-top:0">Masuk petugas</h2><input type="password" id="pin" placeholder="PIN petugas"><div class="btns"><button class="y" id="go">Masuk</button></div></div></div>
 <div class="ov" id="md"><div class="box"><h2 id="mt" style="margin-top:0"></h2><div id="ml"></div><p>Wali santri ini check-in sekarang?</p><div class="btns"><button class="n" id="no">TIDAK</button><button class="y" id="yes">YA</button></div></div></div>
 <div class="ov" id="hasil"><div class="box"><button class="x" id="hx">✕</button><h2 id="ht"></h2><div id="hi"></div></div></div>
-<script>
-const API='https://script.google.com/macros/s/AKfycbygqpCWGKK6oEb9SnH5wm_syC9YsTbw8nKN41LMga6OzwxEcY28lpjvHSNvZO4_m9IT/exec'; // Ganti dengan URL deployment Web App yang berakhiran /exec
-const VIDEO_ID='hMriuK-WS2A';               // video latar mode ciws di layar lebar; '' = matikan
+<div id="perf" style="display:none;position:fixed;bottom:8px;right:8px;font:12px monospace;background:#000b;color:#fff;padding:5px 9px;border-radius:8px;z-index:30"></div><script>
+const API='https://script.google.com/macros/s/AKfycbwpNjTI9Q8xLyLXl_Ezm9q-j4bxGBEit2uI08hSXOjrXn1C9UKstXhoNQMU5id66_2N/exec';          // URL Web App (/exec) Apps Script penjengukan
+const VIDEO_FILE='latar-kepulangan.mp4';    // video latar ciws & cis di layar lebar (file di repo yang sama); '' = matikan
 const LATAR_FOTO='latar-hp.jpg';            // foto banner (satu folder dengan halaman ini)
-const MODE=new URLSearchParams(location.search).get('mode')==='call'?'call':'ciws';
+const FIREBASE={apiKey:'',authDomain:'',databaseURL:'',projectId:'',appId:''};   // tempel dari Firebase Console; databaseURL kosong = hanya polling
+const NOMOR_WA='085730832221';                    // nomor WhatsApp untuk tombol "Tanya WA" (mode cis)
+const UP=new URLSearchParams(location.search),LOKET=UP.get('loket')||'',MODE=['call','cis'].includes(UP.get('mode'))?UP.get('mode'):'ciws';
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const jam=()=>new Date().toLocaleTimeString('id-ID',{hour12:false}).replace(/\./g,':');
 const kota=a=>String(a||'').split(' - ')[0];
 let PIN=localStorage.getItem('pinJ')||'',D=null,lokal={},snd=true,AC=null,ver='';
 try{D=JSON.parse(localStorage.getItem('dataJ'))}catch(e){}
-$('#ttl').textContent=MODE==='call'?'Panggil Santri':'Check-in Wali Santri';
+$('#ttl').textContent=({call:'Panggil Santri',cis:'Check-in Santri (Keluar)'}[MODE]||'Check-in Wali Santri')+(LOKET?' · Loket '+LOKET:'');
 $('#bg').style.backgroundImage='url("'+LATAR_FOTO+'")';
-if(MODE==='ciws'&&VIDEO_ID&&matchMedia('(min-width:900px)').matches){const v=$('#vid');v.style.display='block';v.innerHTML='<iframe allow="autoplay" src="https://www.youtube-nocookie.com/embed/'+VIDEO_ID+'?autoplay=1&mute=1&controls=0&loop=1&playlist='+VIDEO_ID+'&modestbranding=1&playsinline=1"></iframe>'}
+if(MODE!=='call'&&VIDEO_FILE&&matchMedia('(min-width:900px)').matches){const v=$('#vid');v.style.display='block';v.innerHTML='<video src="'+VIDEO_FILE+'" poster="'+LATAR_FOTO+'" autoplay muted loop playsinline></video>'}
 // ===== suara =====
 function nada(f,t,d,j){if(!snd||!AC)return;const o=AC.createOscillator(),g=AC.createGain();o.type=j||'sine';o.frequency.value=f;o.connect(g);g.connect(AC.destination);const s=AC.currentTime+t;g.gain.setValueAtTime(.3,s);g.gain.exponentialRampToValueAtTime(.001,s+d);o.start(s);o.stop(s+d)}
-const sOk=()=>{nada(880,0,.18);nada(1175,.16,.28)},sBaru=()=>[523,659,784].forEach((f,i)=>nada(f,i*.13,.25,'triangle')),sWarn=()=>{nada(300,0,.25,'square');nada(300,.3,.25,'square')};
+const sOk=()=>{nada(880,0,.18);nada(1175,.16,.28)},sBaru=()=>[523,659,784].forEach((f,i)=>nada(f,i*.13,.25,'triangle')),sWarn=()=>{nada(300,0,.25,'square');nada(300,.3,.25,'square')},sErr=()=>nada(180,0,.5,'sawtooth');
 $('#snd').onclick=()=>{snd=!snd;$('#snd').textContent=snd?'🔊':'🔇'};
 document.addEventListener('pointerdown',()=>{if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume()});
 // ===== data =====
-const cekAPI=()=>{if(!API.startsWith('https://script.google.com/macros/s/')||!API.endsWith('/exec'))throw new Error('URL Apps Script belum dipasang. Isi konstanta API dengan URL Web App yang berakhiran /exec.');};
-const q=async p=>{cekAPI();const r=await fetch(API+'?'+new URLSearchParams(Object.assign({pin:PIN},p)));if(!r.ok)throw new Error('Server HTTP '+r.status);return r.json()};
+const q=p=>fetch(API+'?'+new URLSearchParams(Object.assign({pin:PIN},p))).then(r=>r.json());
 function simpan(r){if(r.dn){D=D||{st:[],dn:{}};D.dn=r.dn;D.v=r.v;ver=r.v;try{localStorage.setItem('dataJ',JSON.stringify(D))}catch(e){}}}
-const dn=()=>Object.assign({},D.dn,lokal);
-function rows(){const m=dn();return D.st.map(a=>{const d=m[a[0]]||['',0,0];return{r:a[0],nama:a[1],ayah:a[2],ibu:a[3],alamat:a[4],kelas:a[5],datang:d[0],keluar:d[1],panggil:d[2]}})}
-const wali=r=>r.ayah||r.ibu||'-',gkey=r=>(wali(r)+'|'+r.alamat).toLowerCase();
-async function kirim(o){for(let i=0;i<6;i++){try{cekAPI();const r=await(await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({pin:PIN},o))})).json();if(r.status==='OK'){simpan(r);o.rows.forEach(x=>delete lokal[x]);return r}if(r.status==='PIN_SALAH')return login()}catch(e){$('#st').textContent='⚠ Belum tersimpan ke server, mencoba lagi…';await new Promise(z=>setTimeout(z,1500*(i+1)))}}$('#st').textContent='⚠ GAGAL menyimpan — cek koneksi lalu ulangi'}
+const dn=()=>{const m=Object.assign({},D.dn),T=Date.now();for(const r in peers){const p=peers[r];if(T-p.t>20000){delete peers[r];continue}const b=m[r]||['',0,0];m[r]=[b[0]||p.v[0],b[1]||p.v[1],b[2]||p.v[2]]}return Object.assign(m,lokal)};
+function rows(){const m=dn();return D.st.map(a=>{const d=m[a[0]]||['',0,0];return{r:a[0],nama:a[1],ayah:a[2],ibu:a[3],alamat:a[4],kelas:a[5],no:a[6]!==undefined?a[6]:a[0]-2,datang:d[0],keluar:d[1],panggil:d[2]}})}
+const wali=r=>r.ayah||r.ibu||'(tanpa nama wali)',gkey=r=>((r.ayah||r.ibu)?wali(r)+'|'+r.alamat:'#'+r.r).toLowerCase();
+let AN=[];try{AN=JSON.parse(localStorage.getItem('antrianJ')||'[]')}catch(e){}const simAn=()=>{try{localStorage.setItem('antrianJ',JSON.stringify(AN))}catch(e){}};
+async function kirim(o){if(!o.id){o.id=Date.now()+'_'+Math.random().toString(36).slice(2,6);AN.push(o);simAn()}for(let i=0;i<6;i++){try{const t0=Date.now();const r=await(await fetch(API,{method:'POST',body:JSON.stringify(Object.assign({pin:PIN,loket:LOKET},o))})).json();if(r.status==='OK'){perf.post=Date.now()-t0;showPerf();AN=AN.filter(a=>a.id!==o.id);simAn();simpan(r);o.rows.forEach(x=>delete lokal[x]);return r}if(r.status==='PIN_SALAH')return login()}catch(e){$('#st').textContent='⚠ Belum tersimpan ke server, mencoba lagi…';await new Promise(z=>setTimeout(z,1500*(i+1)))}}$('#st').textContent='⚠ GAGAL menyimpan — cek koneksi lalu ulangi'}
 function login(){$('#lg').style.display='flex';$('#pin').focus()}
 async function mulai(){
   PIN=$('#pin').value.trim()||PIN;
-  if(!PIN){$('#st').textContent='Masukkan PIN petugas terlebih dahulu.';return}
-  $('#go').disabled=true;$('#go').textContent='Memeriksa…';
-  try{const r=await q({action:'list'});if(r.status==='PIN_SALAH'){$('#pin').value='';$('#st').textContent='PIN salah. Silakan coba lagi.';return login()}
-    if(r.status!=='OK')throw new Error(r.message||'Respons server tidak dikenali');
-    localStorage.setItem('pinJ',PIN);$('#lg').style.display='none';D={st:r.st,dn:r.dn,v:r.v};ver=r.v;simpan(r);jalan()}catch(e){$('#st').textContent='Gagal masuk: '+e.message;$('#lg').style.display='flex'}finally{$('#go').disabled=false;$('#go').textContent='Masuk'}}
+  try{const r=await q({action:'list'});if(r.status==='PIN_SALAH'){$('#pin').value='';return login()}
+    localStorage.setItem('pinJ',PIN);$('#lg').style.display='none';D={st:r.st,dn:r.dn,v:r.v};ver=r.v;simpan(r);jalan()}catch(e){if(D){$('#lg').style.display='none';jalan()}else alert('Gagal terhubung ke server')}}
 $('#go').onclick=mulai;$('#pin').onkeydown=e=>{if(e.key==='Enter')mulai()};
-let jalanOk=false;function jalan(){if(jalanOk)return;jalanOk=true;MODE==='call'?initCall():initCiws();setInterval(async()=>{try{const r=await q({action:'dyn',sejak:ver});if(r.status==='PIN_SALAH')return login();$('#st').textContent='● Tersambung · diperiksa '+jam();if(r.status==='OK'){D.dn=r.dn;D.v=ver=r.v;if(MODE==='call')tampilCall();else cari()}}catch(e){$('#st').textContent='● Koneksi terputus…'}},1500);
+let jalanOk=false;function jalan(){if(jalanOk)return;jalanOk=true;startFB();AN.slice().forEach(o=>kirim(o));MODE==='call'?initCall():MODE==='cis'?initCis():initCiws();const segar=async()=>{try{const r=await q({action:'dyn',sejak:ver});if(r.status==='PIN_SALAH')return login();$('#st').textContent='● Tersambung · diperiksa '+jam();if(r.status==='OK'){D.dn=r.dn;D.v=ver=r.v;if(MODE==='call')tampilCall();else cari()}}catch(e){$('#st').textContent='● Koneksi terputus…'}};window.segar=segar;setInterval(segar,MODE==='call'?1500:3000);
   setInterval(async()=>{try{const r=await q({action:'list'});if(r.status==='OK'){D={st:r.st,dn:r.dn,v:r.v};ver=r.v}}catch(e){}},60000)}
+// ===== FIREBASE: sinyal instan antar layar (Sheet tetap catatan resmi; tanpa nama santri/wali) =====
+const DEBUG=UP.get('debug')==='1',CID=Math.random().toString(36).slice(2,8),peers={},perf={post:0,ack:0,peer:0};let DB=null,OFF=0,fbOn=false;
+function showPerf(){if(!DEBUG)return;const p=$('#perf');p.style.display='block';p.textContent='⚡ Firebase '+(!FIREBASE.databaseURL?'tidak diisi':DB?(fbOn?'ON':'putus'):'memuat…')+' · simpan '+perf.post+'ms · ack '+perf.ack+'ms · sinyal masuk '+perf.peer+'ms'}
+function startFB(){showPerf();if(!FIREBASE.databaseURL||DB)return;const mu=u=>new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://www.gstatic.com/firebasejs/10.12.2/'+u;s.onload=ok;s.onerror=no;document.head.appendChild(s)});
+  mu('firebase-app-compat.js').then(()=>mu('firebase-database-compat.js')).then(initFB).catch(()=>{$('#st').textContent='ℹ Firebase gagal dimuat, memakai polling'})}
+function initFB(){try{firebase.initializeApp(FIREBASE);DB=firebase.database();
+  DB.ref('.info/connected').on('value',s=>{fbOn=!!s.val();showPerf()});
+  DB.ref('.info/serverTimeOffset').once('value',s=>{OFF=s.val()||0;
+    DB.ref('ev').orderByChild('ts').startAt(Date.now()+OFF-3000).on('child_added',s=>{const e=s.val();if(!e||e.src===CID)return;perf.peer=Date.now()+OFF-e.ts;terapEv(e)})})}catch(err){console.warn(err)}}
+function emit(a,rows,j){if(!DB)return;try{const t0=Date.now(),r=DB.ref('ev').push();r.set({a:a,rows:rows,jam:j||'',src:CID,loket:LOKET,ts:firebase.database.ServerValue.TIMESTAMP}).then(()=>{perf.ack=Date.now()-t0;showPerf()});setTimeout(()=>r.remove(),30000)}catch(e){}}
+function terapEv(e){const T=Date.now();(e.rows||[]).forEach(r=>{const p=peers[r]||{v:['',0,0]};if(e.a==='checkin')p.v[0]=e.jam||jam();else if(e.a==='keluar')p.v[1]=e.jam||jam();else if(e.a==='dipanggil')p.v[2]=1;p.t=T;peers[r]=p});showPerf();
+  if(D){if(MODE==='call'&&$('#tb'))tampilCall();else if(MODE==='ciws'&&$('#q'))cari()}setTimeout(()=>window.segar&&window.segar(),1500)}   // sinyal hanya petunjuk: data resmi tetap diambil dari server
 // ===== MODE CIWS =====
 let cur=[],hit=[],sel=0;
 function initCiws(){$('#app').innerHTML='<input type="search" id="q" placeholder="Ketik nama ayah / ibu / santri…" autocomplete="off" autofocus><div id="res"></div>';$('#q').oninput=()=>{sel=0;tutupHasil();cari()};
@@ -75,19 +88,19 @@ function initCiws(){$('#app').innerHTML='<input type="search" id="q" placeholder
   $('#res').onclick=e=>{const it=e.target.closest('.item');if(it)buka(hit[+it.dataset.i])}}
 function cari(keep){const t=($('#q')||{}).value;if(t===undefined)return;const s=t.trim().toLowerCase(),el=$('#res');if(s.length<2){hit=[];el.innerHTML='';return}
   const g={};rows().filter(r=>(r.ayah+' '+r.ibu+' '+r.nama).toLowerCase().includes(s)).forEach(r=>(g[gkey(r)]=g[gkey(r)]||[]).push(r));
-  hit=Object.values(g).slice(0,8);el.innerHTML=hit.map((a,i)=>'<div class="item'+(i===sel?' on':'')+'" data-i="'+i+'"><b>'+esc(wali(a[0]))+'</b> — '+esc(kota(a[0].alamat))+'<div class="sub">Anak: '+a.map(x=>esc(x.nama)+(x.datang?' ✔':'')).join(', ')+'</div></div>').join('')||'<div class="item">Tidak ditemukan</div>'}
+  hit=Object.values(g).slice(0,40);el.innerHTML=hit.map((a,i)=>'<div class="item'+(i===sel?' on':'')+'" data-i="'+i+'"><b>'+esc(wali(a[0]))+'</b> — '+esc(kota(a[0].alamat))+'<div class="sub">Anak: '+a.map(x=>esc(x.nama)+' ('+esc(x.kelas)+')'+(x.datang?' ✔':'')).join(', ')+'</div></div>').join('')||'<div class="item">Tidak ditemukan</div>'}
 function buka(a){cur=a;$('#mt').textContent=wali(a[0])+' — '+kota(a[0].alamat);
   $('#ml').innerHTML=a.map((r,i)=>'<label style="display:block;font-size:18px;margin:6px 0"><input type="checkbox" data-i="'+i+'" '+(r.datang?'disabled':'checked')+'> '+esc(r.nama)+' ('+esc(r.kelas)+')'+(r.datang?' — sudah masuk '+esc(r.datang):'')+'</label>').join('');
   $('#md').style.display='flex';$('#yes').focus()}
 $('#no').onclick=()=>{$('#md').style.display='none';$('#q')&&$('#q').focus()};
 $('#yes').onclick=()=>{const s=[...document.querySelectorAll('#ml input:checked')].map(c=>cur[+c.dataset.i]);$('#md').style.display='none';
   if(!s.length){sWarn();return tampilHasil(true,'SUDAH CHECK-IN','Semua anak wali ini sudah tercatat masuk.')}
-  const t=jam();s.forEach(r=>lokal[r.r]=[t,0,0]);sOk();
+  const t=jam();s.forEach(r=>lokal[r.r]=[t,0,0]);sOk();emit('checkin',s.map(r=>r.r),t);
   tampilHasil(false,'✔ CHECK-IN TERCATAT',s.map(r=>esc(r.nama)).join(' & ')+'<div class="sub" style="color:#fff">bin '+esc(wali(s[0]))+' · '+esc(kota(s[0].alamat))+' · '+t+'</div>');
   kirim({aksi:'checkin',rows:s.map(r=>r.r)}).then(r=>{if(r&&r.sudah&&r.sudah.length){sWarn();$('#st').textContent='ℹ Sebagian sudah tercatat oleh petugas lain'}});$('#q').value='';hit=[];$('#res').innerHTML=''};
 document.addEventListener('keydown',e=>{if($('#md').style.display==='flex'){if(e.key==='Escape')$('#no').click()}});
-function tampilHasil(w,t,i){const h=$('#hasil');h.className='ov '+(w?'warn':'ok');h.style.display='flex';$('#ht').textContent=t;$('#hi').innerHTML=i}
-function tutupHasil(){$('#hasil').style.display='none'}$('#hx').onclick=()=>{tutupHasil();$('#q')&&$('#q').focus()};
+function tampilHasil(w,t,i){const h=$('#hasil');h.className='ov '+(w===true?'warn':w===false?'ok':w);h.style.display='flex';$('#ht').textContent=t;$('#hi').innerHTML=i}
+function tutupHasil(){tunggu=false;$('#hasil').style.display='none'}$('#hx').onclick=()=>{tutupHasil();$('#q')&&$('#q').focus()};
 // ===== MODE CALL =====
 let seen=new Set(),dipanggil=new Set();
 function initCall(){$('#app').innerHTML='<div id="banner"></div><table><thead><tr><th>Masuk</th><th>Santri bin Wali</th><th>Asal</th><th>Kelas</th><th>Status</th></tr></thead><tbody id="tb"></tbody></table>';tampilCall()}
@@ -96,7 +109,31 @@ function tampilCall(){const r=rows().filter(x=>x.datang&&!x.keluar).sort((a,b)=>
   const baru=Object.values(g).filter(a=>!a.every(sdh));if(baru.some(a=>!seen.has(a[0].r+'@'+a[0].datang))){sBaru();baru.forEach(a=>seen.add(a[0].r+'@'+a[0].datang))}
   const top=baru[baru.length-1],b=$('#banner');
   if(top){b.style.display='block';b.innerHTML='<h1>'+esc(top.map(x=>x.nama).join(' & '))+'<br>bin '+esc(wali(top[0]))+'</h1><div class="k">'+esc(kota(top[0].alamat))+(baru.length>1?' · '+(baru.length-1)+' lainnya menunggu':'')+'</div><button id="ok">SUDAH DIPANGGIL</button>';
-    $('#ok').onclick=()=>{top.forEach(x=>dipanggil.add(x.r));kirim({aksi:'dipanggil',rows:top.map(x=>x.r)});tampilCall()}}else b.style.display='none';
+    $('#ok').onclick=()=>{top.forEach(x=>dipanggil.add(x.r));emit('dipanggil',top.map(x=>x.r));kirim({aksi:'dipanggil',rows:top.map(x=>x.r)});tampilCall()}}else b.style.display='none';
   $('#tb').innerHTML=r.map(x=>'<tr class="'+(sdh(x)?'dim':'')+'"><td>'+esc(x.datang)+'</td><td>'+esc(x.nama)+' bin '+esc(wali(x))+'</td><td>'+esc(kota(x.alamat))+'</td><td>'+esc(x.kelas)+'</td><td>'+(sdh(x)?'Sudah dipanggil':'Belum')+'</td></tr>').join('')}
+// ===== MODE CIS (scanner barcode fisik, mengetik angka + Enter) =====
+let tunggu=false,lastK='',lastT=0;
+function initCis(){
+  $('#app').innerHTML='<input id="sc" inputmode="none" autocomplete="off" aria-label="scanner" style="position:fixed;left:-300px;top:0;opacity:.01"><div style="text-align:center;font-size:26px;margin:22px 0">Scan barcode santri…</div><input type="search" id="q2" placeholder="Kartu hilang? Cari nama santri…" autocomplete="off"><div id="res"></div>';
+  const sc=$('#sc'),q2=$('#q2');sc.focus();
+  sc.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const k=sc.value.trim();sc.value='';if(k)scan(k)}};
+  setInterval(()=>{const a=document.activeElement;if(a!==q2&&a.id!=='pin'&&$('#lg').style.display!=='flex')sc.focus()},400);
+  q2.oninput=()=>{const s=q2.value.trim().toLowerCase(),el=$('#res');if(s.length<2){el.innerHTML='';return}hit=rows().filter(r=>r.nama.toLowerCase().includes(s)).slice(0,8);el.innerHTML=hit.map((r,i)=>'<div class="item" data-i="'+i+'"><b>'+esc(r.nama)+'</b> — '+esc(r.kelas)+'</div>').join('')||'<div class="item">Tidak ditemukan</div>'};
+  $('#res').onclick=e=>{const it=e.target.closest('.item');if(it&&hit[+it.dataset.i]){hasilRow(hit[+it.dataset.i]);q2.value='';$('#res').innerHTML='';sc.focus()}}}
+function scan(k){const t=Date.now();if(k===lastK&&t-lastT<2000)return;lastK=k;lastT=t;   // kode sama < 2 detik diabaikan
+  if(tunggu){sWarn();return}                                                           // popup legalitas belum dijawab
+  const n=parseInt(k,10),r=isNaN(n)?null:rows().find(x=>Number(x.no)===n);
+  if(!r){sErr();return tampilHasil('bad','BARCODE TIDAK DIKENAL','Isi: '+esc(k))}
+  hasilRow(r)}
+function hasilRow(r){
+  const info=esc(r.nama)+'<div class="sub" style="color:#fff">'+esc(r.kelas)+' · bin '+esc(wali(r))+' · '+esc(kota(r.alamat))+'</div>';
+  if(r.keluar){sWarn();return tampilHasil(true,'⚠ SUDAH KELUAR jam '+r.keluar,info)}
+  if(r.datang)return silakan(r,0,info);
+  sErr();tunggu=true;
+  tampilHasil('bad','BELUM BOLEH CHECK-IN',info+'<div class="btns"><button id="lg1">Legalitas keluar tanpa wali santri</button></div><div class="btns"><button id="wa">Belum tau? Tanya WA: '+esc(NOMOR_WA)+'</button></div>');
+  $('#lg1').onclick=()=>{$('#ht').textContent='Apakah santri '+r.nama+' sudah mendapatkan legalitas tanpa wali?';$('#hi').innerHTML='<div class="btns"><button id="tdk">Tidak</button><button id="iya">Iya</button></div>';$('#tdk').onclick=tutupHasil;$('#iya').onclick=()=>{tunggu=false;silakan(r,1,info)}};
+  $('#wa').onclick=()=>window.open('https://wa.me/'+NOMOR_WA.replace(/^0/,'62')+'?text='+encodeURIComponent('Apakah santri '+r.nama+' sudah mendapatkan legalitas tanpa wali tadz?'),'_blank')}
+function silakan(r,leg,info){const tj=jam();lokal[r.r]=[r.datang,tj,r.panggil];sOk();emit('keluar',[r.r],tj);tampilHasil(false,'✔ SILAKAN',info);   // optimistis, server menyusul
+  kirim({aksi:'keluar',rows:[r.r],legalitas:leg}).then(x=>{if(x&&x.status==='OK'&&(x.sudah.length||x.tolak.length)){sWarn();$('#st').textContent='ℹ Sudah tercatat / ditolak oleh server'}})}
 D&&PIN?mulai():login();
 </script></body></html>
