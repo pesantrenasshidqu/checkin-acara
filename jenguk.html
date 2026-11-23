@@ -32,7 +32,7 @@ table{width:100%;border-collapse:collapse;background:#000a;border-radius:12px;ov
 <div class="ov" id="md"><div class="box"><h2 id="mt" style="margin-top:0"></h2><div id="ml"></div><p>Wali santri ini check-in sekarang?</p><div class="btns"><button class="n" id="no">TIDAK</button><button class="y" id="yes">YA</button></div></div></div>
 <div class="ov" id="hasil"><div class="box"><button class="x" id="hx">✕</button><h2 id="ht"></h2><div id="hi"></div></div></div>
 <script>
-const API='https://script.google.com/macros/s/AKfycbygqpCWGKK6oEb9SnH5wm_syC9YsTbw8nKN41LMga6OzwxEcY28lpjvHSNvZO4_m9IT/exec?action=list&pin=x';          // URL Web App (/exec) Apps Script penjengukan
+const API='TEMPEL_URL_WEB_APP_APPS_SCRIPT_DI_SINI'; // Ganti dengan URL deployment Web App yang berakhiran /exec
 const VIDEO_ID='hMriuK-WS2A';               // video latar mode ciws di layar lebar; '' = matikan
 const LATAR_FOTO='latar-hp.jpg';            // foto banner (satu folder dengan halaman ini)
 const MODE=new URLSearchParams(location.search).get('mode')==='call'?'call':'ciws';
@@ -50,17 +50,21 @@ const sOk=()=>{nada(880,0,.18);nada(1175,.16,.28)},sBaru=()=>[523,659,784].forEa
 $('#snd').onclick=()=>{snd=!snd;$('#snd').textContent=snd?'🔊':'🔇'};
 document.addEventListener('pointerdown',()=>{if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume()});
 // ===== data =====
-const q=p=>fetch(API+'?'+new URLSearchParams(Object.assign({pin:PIN},p))).then(r=>r.json());
+const cekAPI=()=>{if(!API.startsWith('https://script.google.com/macros/s/')||!API.endsWith('/exec'))throw new Error('URL Apps Script belum dipasang. Isi konstanta API dengan URL Web App yang berakhiran /exec.');};
+const q=async p=>{cekAPI();const r=await fetch(API+'?'+new URLSearchParams(Object.assign({pin:PIN},p)));if(!r.ok)throw new Error('Server HTTP '+r.status);return r.json()};
 function simpan(r){if(r.dn){D=D||{st:[],dn:{}};D.dn=r.dn;D.v=r.v;ver=r.v;try{localStorage.setItem('dataJ',JSON.stringify(D))}catch(e){}}}
 const dn=()=>Object.assign({},D.dn,lokal);
 function rows(){const m=dn();return D.st.map(a=>{const d=m[a[0]]||['',0,0];return{r:a[0],nama:a[1],ayah:a[2],ibu:a[3],alamat:a[4],kelas:a[5],datang:d[0],keluar:d[1],panggil:d[2]}})}
 const wali=r=>r.ayah||r.ibu||'-',gkey=r=>(wali(r)+'|'+r.alamat).toLowerCase();
-async function kirim(o){for(let i=0;i<6;i++){try{const r=await(await fetch(API,{method:'POST',body:JSON.stringify(Object.assign({pin:PIN},o))})).json();if(r.status==='OK'){simpan(r);o.rows.forEach(x=>delete lokal[x]);return r}if(r.status==='PIN_SALAH')return login()}catch(e){$('#st').textContent='⚠ Belum tersimpan ke server, mencoba lagi…';await new Promise(z=>setTimeout(z,1500*(i+1)))}}$('#st').textContent='⚠ GAGAL menyimpan — cek koneksi lalu ulangi'}
+async function kirim(o){for(let i=0;i<6;i++){try{cekAPI();const r=await(await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({pin:PIN},o))})).json();if(r.status==='OK'){simpan(r);o.rows.forEach(x=>delete lokal[x]);return r}if(r.status==='PIN_SALAH')return login()}catch(e){$('#st').textContent='⚠ Belum tersimpan ke server, mencoba lagi…';await new Promise(z=>setTimeout(z,1500*(i+1)))}}$('#st').textContent='⚠ GAGAL menyimpan — cek koneksi lalu ulangi'}
 function login(){$('#lg').style.display='flex';$('#pin').focus()}
 async function mulai(){
   PIN=$('#pin').value.trim()||PIN;
-  try{const r=await q({action:'list'});if(r.status==='PIN_SALAH'){$('#pin').value='';return login()}
-    localStorage.setItem('pinJ',PIN);$('#lg').style.display='none';D={st:r.st,dn:r.dn,v:r.v};ver=r.v;simpan(r);jalan()}catch(e){if(D){$('#lg').style.display='none';jalan()}else alert('Gagal terhubung ke server')}}
+  if(!PIN){$('#st').textContent='Masukkan PIN petugas terlebih dahulu.';return}
+  $('#go').disabled=true;$('#go').textContent='Memeriksa…';
+  try{const r=await q({action:'list'});if(r.status==='PIN_SALAH'){$('#pin').value='';$('#st').textContent='PIN salah. Silakan coba lagi.';return login()}
+    if(r.status!=='OK')throw new Error(r.message||'Respons server tidak dikenali');
+    localStorage.setItem('pinJ',PIN);$('#lg').style.display='none';D={st:r.st,dn:r.dn,v:r.v};ver=r.v;simpan(r);jalan()}catch(e){$('#st').textContent='Gagal masuk: '+e.message;$('#lg').style.display='flex'}finally{$('#go').disabled=false;$('#go').textContent='Masuk'}}
 $('#go').onclick=mulai;$('#pin').onkeydown=e=>{if(e.key==='Enter')mulai()};
 let jalanOk=false;function jalan(){if(jalanOk)return;jalanOk=true;MODE==='call'?initCall():initCiws();setInterval(async()=>{try{const r=await q({action:'dyn',sejak:ver});if(r.status==='PIN_SALAH')return login();$('#st').textContent='● Tersambung · diperiksa '+jam();if(r.status==='OK'){D.dn=r.dn;D.v=ver=r.v;if(MODE==='call')tampilCall();else cari()}}catch(e){$('#st').textContent='● Koneksi terputus…'}},1500);
   setInterval(async()=>{try{const r=await q({action:'list'});if(r.status==='OK'){D={st:r.st,dn:r.dn,v:r.v};ver=r.v}}catch(e){}},60000)}
