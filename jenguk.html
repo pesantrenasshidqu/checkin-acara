@@ -46,7 +46,7 @@ table{width:100%;border-collapse:collapse;background:#000a;border-radius:12px;ov
 const API='https://script.google.com/macros/s/AKfycbwpNjTI9Q8xLyLXl_Ezm9q-j4bxGBEit2uI08hSXOjrXn1C9UKstXhoNQMU5id66_2N/exec';          // URL Web App (/exec) Apps Script penjengukan
 const VIDEO_FILE='latar-kepulangan.mp4';    // video latar ciws & cis di layar lebar (file di repo yang sama); '' = matikan
 const LATAR_FOTO='latar-hp.jpg';            // foto banner (satu folder dengan halaman ini)
-const FIREBASE={apiKey:'',authDomain:'',databaseURL:'',projectId:'',appId:''};   // tempel dari Firebase Console; databaseURL kosong = hanya polling
+const FIREBASE={apiKey:'AIzaSyD_r7jhz6vlGp8bv-zi6pS3rzDkqm1sXBY',authDomain:'qr-code-5c645.firebaseapp.com',databaseURL:'https://qr-code-5c645-default-rtdb.asia-southeast1.firebasedatabase.app',projectId:'qr-code-5c645',storageBucket:'qr-code-5c645.firebasestorage.app',messagingSenderId:'510225840026',appId:'1:510225840026:web:3da0229b14e8fcb7e96c23',measurementId:'G-GZH24ZXERW'};   // konfigurasi Firebase proyek Penjengukan
 const NOMOR_WA='085730832221';                    // nomor WhatsApp untuk tombol "Tanya WA" (mode cis)
 const UP=new URLSearchParams(location.search),LOKET=UP.get('counter')||UP.get('loket')||'',MODE=['call','cis','cos','admin'].includes(UP.get('mode'))?UP.get('mode'):'ciws';
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
