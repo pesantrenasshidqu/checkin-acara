@@ -18,13 +18,13 @@ input[type=search],input[type=password]{width:100%;font-size:22px;padding:14px;b
 .box{background:#fff;color:#111;border-radius:16px;padding:20px;max-width:480px;width:100%}
 .btns{display:flex;gap:10px;margin-top:16px}button{font-size:20px;padding:14px;border:0;border-radius:12px;font-weight:700;cursor:pointer;flex:1}
 .y{background:#16a34a;color:#fff}.n{background:#64748b;color:#fff}
-#hasil{padding:0}#hasil .box{position:relative;text-align:center;color:#fff;padding:34px 20px}#hasil .x{position:absolute;top:10px;right:10px;width:42px;height:42px;flex:none;border-radius:50%;background:#0004;color:#fff;font-size:20px;padding:0}
-#hasil h2{margin:0 0 8px;font-size:30px}#hasil.ok .box{background:#15803d}#hasil.warn .box{background:#b45309}
+#hasil{padding:0;background:transparent;pointer-events:none}#hasil .box{pointer-events:auto;position:relative;text-align:center;color:#fff;padding:clamp(28px,5vw,60px) clamp(18px,4vw,48px);max-width:min(94vw,1000px);border-radius:28px;box-shadow:0 20px 80px #000d,0 0 0 4px #fff3}#hasil .x{position:absolute;top:12px;right:12px;width:60px;height:60px;flex:none;border-radius:50%;background:#0005;color:#fff;font-size:28px;padding:0}
+#hasil h2{margin:0 0 12px;font-size:clamp(40px,7.5vw,92px);line-height:1.05}#hi{font-size:clamp(22px,3.6vw,46px);font-weight:700}#hasil .sub{font-size:clamp(17px,2.4vw,30px);opacity:.95;margin-top:8px}#hasil.ok .box{background:#15803d}#hasil.warn .box{background:#b45309}
 #banner{display:none;background:#0066AE;border:3px solid #fff;border-radius:18px;padding:26px 16px;text-align:center;margin-bottom:14px}
 #banner h1{margin:0 0 8px;font-size:clamp(28px,5.5vw,60px);line-height:1.15}#banner .k{font-size:clamp(18px,2.6vw,30px)}
 #banner button{max-width:340px;margin-top:14px;background:#fff;color:#0066AE}#banner .w{font-size:14px;opacity:.85;margin-top:8px}
 table{width:100%;border-collapse:collapse;background:#000a;border-radius:12px;overflow:hidden}td,th{padding:9px 10px;text-align:left;border-bottom:1px solid #fff2}.dim{opacity:.4}
-#res{max-height:70vh;overflow-y:auto}#hasil.bad .box{background:#b91c1c}#hasil .btns button{background:#fff;color:#111;font-size:17px}
+#res{max-height:70vh;overflow-y:auto}#hasil.bad .box{background:#b91c1c}#hasil .btns button{background:#fff;color:#111;font-size:clamp(18px,2.4vw,28px);min-height:68px}#md .box{max-width:720px;padding:28px}#md h2{font-size:clamp(26px,4vw,44px)}#md p{font-size:clamp(20px,2.6vw,30px)}#md .btns button{min-height:76px;font-size:clamp(22px,3vw,34px)}#ml label{font-size:clamp(20px,2.6vw,30px)!important}
 body.adm{font-size:18px}body.adm header h1{font-size:30px}
 .tabs{display:flex;gap:10px;justify-content:center;margin:4px 0 16px;flex-wrap:wrap;position:sticky;top:0;z-index:5;padding:8px 0;background:linear-gradient(#0b3d2ef2,#0b3d2e00)}
 .tabs button{flex:1 1 200px;max-width:360px;font-size:22px;padding:18px 20px;min-height:66px;background:#ffffff26;color:#fff;border:3px solid #fff4;border-radius:18px}.tabs button.on{background:#fff;color:#0b3d2e;border-color:#fff}
@@ -57,13 +57,13 @@ const VIDEO_FILE='latar-kepulangan.mp4';    // video latar ciws & cis di layar l
 const LATAR_FOTO='latar-hp.jpg';            // foto banner (satu folder dengan halaman ini)
 const FIREBASE={apiKey:'AIzaSyD_r7jhz6vlGp8bv-zi6pS3rzDkqm1sXBY',authDomain:'qr-code-5c645.firebaseapp.com',databaseURL:'https://qr-code-5c645-default-rtdb.asia-southeast1.firebasedatabase.app',projectId:'qr-code-5c645',storageBucket:'qr-code-5c645.firebasestorage.app',messagingSenderId:'510225840026',appId:'1:510225840026:web:3da0229b14e8fcb7e96c23',measurementId:'G-GZH24ZXERW'};   // tempel dari Firebase Console; databaseURL kosong = hanya polling
 const NOMOR_WA='085730832221';                    // nomor WhatsApp untuk tombol "Tanya WA" (mode cis)
-const UP=new URLSearchParams(location.search),LOKET=UP.get('counter')||UP.get('loket')||'',MODE=['call','cis','cos','admin'].includes(UP.get('mode'))?UP.get('mode'):'ciws';
+const UP=new URLSearchParams(location.search),LOKET=UP.get('counter')||UP.get('loket')||'',MODE=['call','cis','cos','admin','cek'].includes(UP.get('mode'))?UP.get('mode'):'ciws';
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let SO=0;const jam=()=>new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Jakarta',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date(Date.now()+SO));   // WIB, selaras jam server
 const kota=a=>String(a||'').split(' - ')[0];
 let PIN=localStorage.getItem('pinJ')||'',D=null,lokal={},snd=true,AC=null,ver='';
 try{D=JSON.parse(localStorage.getItem('dataJ'))}catch(e){}
-$('#ttl').textContent=({call:'Panggil Santri',cis:'Check-in Santri (Keluar)',cos:'Check-out Santri (Kembali)',admin:'Admin Penjengukan'}[MODE]||'Check-in Wali Santri')+(LOKET?' · Counter '+LOKET:'');
+$('#ttl').textContent=({call:'Panggil Santri',cis:'Check-in Santri (Keluar)',cos:'Check-out Santri (Kembali)',admin:'Admin Penjengukan',cek:'Pemeriksaan Sistem'}[MODE]||'Check-in Wali Santri')+(LOKET?' · Counter '+LOKET:'');
 $('#bg').style.backgroundImage='url("'+LATAR_FOTO+'")';
 if(['ciws','cis','cos'].includes(MODE)&&VIDEO_FILE&&matchMedia('(min-width:900px)').matches){const v=$('#vid');v.style.display='block';v.innerHTML='<video src="'+VIDEO_FILE+'" poster="'+LATAR_FOTO+'" autoplay muted loop playsinline></video>'}
 // ===== suara =====
@@ -79,15 +79,25 @@ const dn=()=>{const m=Object.assign({},D.dn),T=Date.now(),E=['',0,0,0,''];for(co
 function rows(){const m=dn();return D.st.map(a=>{const d=m[a[0]]||['',0,0,0,''];return{r:a[0],nama:a[1],ayah:a[2],ibu:a[3],alamat:a[4],kelas:a[5],no:a[6]!==undefined?a[6]:a[0]-2,datang:d[0],keluar:d[1],panggil:d[2],masuk:d[3],batas:d[4]}})}
 const wali=r=>r.ayah||r.ibu||'(tanpa nama wali)',gkey=r=>((r.ayah||r.ibu)?wali(r)+'|'+r.alamat:'#'+r.r).toLowerCase();
 let AN=[];try{AN=JSON.parse(localStorage.getItem('antrianJ')||'[]')}catch(e){}const simAn=()=>{try{localStorage.setItem('antrianJ',JSON.stringify(AN))}catch(e){}};
-async function kirim(o){if(!o.id){o.id=Date.now()+'_'+Math.random().toString(36).slice(2,6);AN.push(o);simAn()}for(let i=0;i<6;i++){try{const t0=Date.now();const r=await(await fetch(API,{method:'POST',body:JSON.stringify(Object.assign({pin:PIN,loket:LOKET},o))})).json();if(r.status==='OK'){perf.post=Date.now()-t0;showPerf();AN=AN.filter(a=>a.id!==o.id);simAn();simpan(r);o.rows.forEach(x=>delete lokal[x]);return r}if(r.status==='PIN_SALAH')return login();if(r.status==='BUKAN_ADMIN'){AN=AN.filter(a=>a.id!==o.id);simAn();alert('Hanya untuk admin: masuk dengan PIN admin.');return r}}catch(e){$('#st').textContent='⚠ Belum tersimpan ke server, mencoba lagi…';await new Promise(z=>setTimeout(z,1500*(i+1)))}}$('#st').textContent='⚠ GAGAL menyimpan — cek koneksi lalu ulangi'}
+const FLY=new Set(),zz=ms=>new Promise(z=>setTimeout(z,ms));
+async function kirim(o){if(!o.id){o.id=Date.now()+'_'+Math.random().toString(36).slice(2,6);AN.push(o);simAn()}
+  if(FLY.has(o.id))return;FLY.add(o.id);
+  try{for(let i=0;i<6;i++){try{const t0=Date.now(),r=await(await fetch(API,{method:'POST',body:JSON.stringify(Object.assign({pin:PIN,loket:LOKET},o))})).json();
+      if(r.status==='OK'){perf.post=Date.now()-t0;showPerf();AN=AN.filter(a=>a.id!==o.id);simAn();simpan(r);o.rows.forEach(x=>delete lokal[x]);return r}
+      if(r.status==='PIN_SALAH')return login();
+      if(r.status==='BUKAN_ADMIN'){AN=AN.filter(a=>a.id!==o.id);simAn();alert('Hanya untuk admin: masuk dengan PIN admin.');return r}
+      await zz(700*(i+1))}                                                    // SIBUK / status lain: tunggu lalu coba lagi
+    catch(e){$('#st').textContent='⚠ Belum tersimpan ke server, mencoba lagi…';await zz(1500*(i+1))}}
+    $('#st').textContent='⚠ Belum tersimpan, dicoba lagi otomatis'}finally{FLY.delete(o.id)}}
 function login(){$('#lg').style.display='flex';$('#pin').focus()}
 async function mulai(){
   PIN=$('#pin').value.trim()||PIN;
   try{const r=await q({action:'list'});if(r.status==='PIN_SALAH'){$('#pin').value='';return login()}
-    if(MODE==='admin'&&!r.admin){$('#pin').value='';alert('Mode admin memerlukan PIN admin');return login()}
+    if(r.status==='SIBUK'){setTimeout(mulai,1500);return}
+    if((MODE==='admin'||MODE==='cek')&&!r.admin){$('#pin').value='';alert('Mode ini memerlukan PIN admin');return login()}
     localStorage.setItem('pinJ',PIN);$('#lg').style.display='none';D={st:r.st,dn:r.dn,v:r.v,cfg:r.cfg||{batas:'15:00:00'}};ver=r.v;simpan(r);jalan()}catch(e){if(D){$('#lg').style.display='none';jalan()}else alert('Gagal terhubung ke server')}}
 $('#go').onclick=mulai;$('#pin').onkeydown=e=>{if(e.key==='Enter')mulai()};
-let jalanOk=false;function jalan(){if(jalanOk)return;jalanOk=true;startFB();AN.slice().forEach(o=>kirim(o));MODE==='call'?initCall():MODE==='admin'?initAdmin():(MODE==='cis'||MODE==='cos')?initCis():initCiws();const segar=async()=>{try{const r=await q({action:'dyn',sejak:ver});if(r.status==='PIN_SALAH')return login();$('#st').textContent='● Tersambung · diperiksa '+jam();if(r.ts)SO=r.ts-Date.now();if(r.status==='OK'){D.dn=r.dn;D.v=ver=r.v;if(r.cfg)D.cfg=r.cfg;if(MODE==='call')tampilCall();else if(MODE==='admin')adminRefresh();else cari()}}catch(e){$('#st').textContent='● Koneksi terputus…'}};window.segar=segar;(function loop(){segar().then(()=>setTimeout(loop,fbOn?(MODE==='call'||MODE==='admin'?4000:10000):(MODE==='call'||MODE==='admin'?1500:3000)))})();   // Firebase aktif: polling hanya jaring pengaman
+let jalanOk=false;function jalan(){if(jalanOk)return;jalanOk=true;startFB();AN.slice().forEach(o=>kirim(o));setInterval(()=>AN.slice().forEach(o=>kirim(o)),20000);MODE==='call'?initCall():MODE==='cek'?initCek():MODE==='admin'?initAdmin():(MODE==='cis'||MODE==='cos')?initCis():initCiws();const segar=async()=>{try{const r=await q({action:'dyn',sejak:ver});if(r.status==='PIN_SALAH')return login();$('#st').textContent='● Tersambung · diperiksa '+jam();if(r.ts)SO=r.ts-Date.now();if(r.status==='OK'){D.dn=r.dn;D.v=ver=r.v;if(r.cfg)D.cfg=r.cfg;if(MODE==='call')tampilCall();else if(MODE==='admin')adminRefresh();else cari()}}catch(e){$('#st').textContent='● Koneksi terputus…'}};window.segar=segar;(function loop(){segar().then(()=>setTimeout(loop,fbOn?(MODE==='call'||MODE==='admin'?4000:10000):(MODE==='call'||MODE==='admin'?1500:3000)))})();   // Firebase aktif: polling hanya jaring pengaman
   setInterval(async()=>{try{const r=await q({action:'list'});if(r.status==='OK'){D={st:r.st,dn:r.dn,v:r.v,cfg:r.cfg||{batas:'15:00:00'}};ver=r.v}}catch(e){}},60000)}
 // ===== FIREBASE: sinyal instan antar layar (Sheet tetap catatan resmi; tanpa nama santri/wali) =====
 const DEBUG=UP.get('debug')==='1',CID=Math.random().toString(36).slice(2,8),peers={},perf={post:0,ack:0,peer:0};let DB=null,OFF=0,fbOn=false;
@@ -120,7 +130,7 @@ $('#yes').onclick=()=>{const s=[...document.querySelectorAll('#ml input:checked'
   if(!s.length){sWarn();return tampilHasil(true,'SUDAH CHECK-IN','Semua anak wali ini sudah tercatat masuk.')}
   const t=jam();s.forEach(r=>lokal[r.r]=[t,0,0]);sOk();emit('checkin',s.map(r=>r.r),t);
   tampilHasil(false,'✔ CHECK-IN TERCATAT',s.map(r=>esc(r.nama)).join(' & ')+'<div class="sub" style="color:#fff">bin '+esc(wali(s[0]))+' · '+esc(kota(s[0].alamat))+' · '+t+'</div>');
-  kirim({aksi:'checkin',rows:s.map(r=>r.r)}).then(r=>{if(r&&r.sudah&&r.sudah.length){sWarn();$('#st').textContent='ℹ Sebagian sudah tercatat oleh petugas lain'}});$('#q').value='';hit=[];$('#res').innerHTML=''};
+  kirim({aksi:'checkin',rows:s.map(r=>r.r),tj:t}).then(r=>{if(r&&r.sudah&&r.sudah.length){sWarn();$('#st').textContent='ℹ Sebagian sudah tercatat oleh petugas lain'}});$('#q').value='';hit=[];$('#res').innerHTML=''};
 document.addEventListener('keydown',e=>{if($('#md').style.display==='flex'){if(e.key==='Escape')$('#no').click()}});
 function tampilHasil(w,t,i){const h=$('#hasil');h.className='ov '+(w===true?'warn':w===false?'ok':w);h.style.display='flex';$('#ht').textContent=t;$('#hi').innerHTML=i;clearTimeout(HT);if(MODE==='ciws'||MODE==='cos')HT=setTimeout(tutupHasil,5000)}   // popup ciws & cos hilang sendiri 5 detik
 function tutupHasil(){clearTimeout(HT);tunggu=false;$('#hasil').style.display='none'}$('#hx').onclick=()=>{tutupHasil();$('#q')&&$('#q').focus()};
@@ -156,7 +166,7 @@ function hasilRow(r){
   $('#lg1').onclick=()=>{$('#ht').textContent='Apakah santri '+r.nama+' sudah mendapatkan legalitas tanpa wali?';$('#hi').innerHTML='<div class="btns"><button id="tdk">Tidak</button><button id="iya">Iya</button></div>';$('#tdk').onclick=tutupHasil;$('#iya').onclick=()=>{tunggu=false;silakan(r,1,info)}};
   $('#wa').onclick=()=>window.open('https://wa.me/'+NOMOR_WA.replace(/^0/,'62')+'?text='+encodeURIComponent('Apakah santri '+r.nama+' sudah mendapatkan legalitas tanpa wali tadz?'),'_blank')}
 function silakan(r,leg,info){const tj=jam();lokal[r.r]=[r.datang,tj,r.panggil];sOk();emit('keluar',[r.r],tj);tampilHasil(false,'✔ SILAKAN',info);   // optimistis, server menyusul
-  kirim({aksi:'keluar',rows:[r.r],legalitas:leg}).then(x=>{if(x&&x.status==='OK'&&(x.sudah.length||x.tolak.length)){sWarn();$('#st').textContent='ℹ Sudah tercatat / ditolak oleh server'}})}
+  kirim({aksi:'keluar',rows:[r.r],legalitas:leg,tj:tj}).then(x=>{if(x&&x.status==='OK'&&(x.sudah.length||x.tolak.length)){sWarn();$('#st').textContent='ℹ Sudah tercatat / ditolak oleh server'}})}
 // ===== MODE COS (santri scan barcode saat kembali) =====
 let HT;const sc2=s=>{const p=String(s||'0').split(':');return(+p[0])*3600+(+p[1]||0)*60+(+p[2]||0)};
 const fd=t=>{t=Math.max(0,Math.round(t));return t<60?t+' dtk':t<3600?Math.floor(t/60)+' mnt '+String(t%60).padStart(2,'0')+' dtk':Math.floor(t/3600)+' j '+Math.floor(t%3600/60)+' mnt'};
@@ -169,7 +179,7 @@ function hasilCos(r){
   lokal[r.r]=[r.datang,r.keluar,r.panggil,t];emit('kembali',[r.r],t);
   const det='<div class="sub" style="color:#fff">Keluar '+esc(r.keluar)+' · Masuk '+t+' · Batas '+esc(bt)+' · Di luar '+fd(dur)+'</div>';
   if(tl>0){sWarn();tampilHasil('bad','⏰ TERLAMBAT '+fd(tl),info+det)}else{sOk();tampilHasil(false,'✔ TEPAT WAKTU',info+det)}
-  kirim({aksi:'kembali',rows:[r.r]}).then(x=>{if(x&&x.status==='OK'&&(x.sudah.length||x.tolak.length)){sWarn();$('#st').textContent='ℹ Sudah tercatat / ditolak oleh server'}})}
+  kirim({aksi:'kembali',rows:[r.r],tj:t}).then(x=>{if(x&&x.status==='OK'&&(x.sudah.length||x.tolak.length)){sWarn();$('#st').textContent='ℹ Sudah tercatat / ditolak oleh server'}})}
 // ===== MODE ADMIN: realtime (papan jadwal), pengaturan batas, scan admin =====
 let cntA=0,aTab='rt',fS='all',fK='',fQ='',cek={},aksiA='keluar',logA=[],pendA={},tmA=null,lastA='',lastAT=0,tk=0;
 function adminRefresh(){if(!$('#p-rt'))return;renderRT();const a=document.activeElement;if(!(a&&a.closest&&a.closest('#p-st')))renderST()}
@@ -237,6 +247,48 @@ function scanA(k){const t=Date.now();if(k===lastA&&t-lastAT<2000)return;lastA=k;
   else{if(!r.keluar){sErr();return logAdd('rd',esc(r.nama)+' · belum tercatat keluar')}if(r.masuk){sWarn();return logAdd('yl',esc(r.nama)+' · sudah kembali '+esc(r.masuk))}lokal[r.r]=[r.datang,r.keluar,r.panggil,jm]}
   sOk();cntA++;$('#cntA').textContent=cntA;logAdd('gr',esc(r.nama)+' · '+esc(r.kelas)+' · '+(aksiA==='keluar'?'KELUAR ':'KEMBALI ')+jm);
   const key=aksiA+'|'+jf;(pendA[key]=pendA[key]||[]).push(r.r);clearTimeout(tmA);tmA=setTimeout(flushA,800);adminRefresh()}   // digabung: satu kiriman untuk banyak kartu
-function flushA(){clearTimeout(tmA);Object.keys(pendA).forEach(k=>{const p=k.split('|'),rs=pendA[k];delete pendA[k];kirim({aksi:p[0],rows:rs,admin:1,jam:p[1]});emit(p[0],rs,p[1]||jam())})}
+function flushA(){clearTimeout(tmA);Object.keys(pendA).forEach(k=>{const p=k.split('|'),rs=pendA[k];delete pendA[k];kirim({aksi:p[0],rows:rs,admin:1,jam:p[1],tj:jam()});emit(p[0],rs,p[1]||jam())})}
+// ===== MODE CEK: pemeriksaan otomatis sebelum acara =====
+let cekLap=[];
+const IKON={ok:'✅',warn:'⚠️',bad:'❌'},KLS={ok:'gr',warn:'yl',bad:'rd'};
+function tampilCek(fin){$('#ckList').innerHTML=cekLap.map(x=>'<div class="lg '+KLS[x.st]+'"><b>'+IKON[x.st]+' '+esc(x.k)+'</b> — '+esc(x.d)+'</div>').join('');
+  if(fin){const b=cekLap.filter(x=>x.st==='bad').length,w=cekLap.filter(x=>x.st==='warn').length;$('#ckSum').textContent=b?'❌ '+b+' gagal, '+w+' perlu dicek':w?'⚠️ '+w+' perlu dicek, selebihnya baik':'✅ Semua baik — siap acara'}}
+function initCek(){
+  document.body.classList.add('adm');$('#app').style.maxWidth='1000px';
+  $('#app').innerHTML='<div class="card"><h3>🩺 Pemeriksaan sistem otomatis</h3><small>Jalankan sebelum acara dan setiap ada perubahan. Tidak mengubah data santri.</small><div class="rw"><button class="y" id="ckGo">▶ Jalankan pemeriksaan</button><button class="n" id="ckCp">📋 Salin laporan</button><b id="ckSum"></b></div></div><div id="ckList"></div><div class="card"><h3>🔖 Uji scanner &amp; kartu</h3><small>Scan satu kartu. Dicek: Enter terkirim, kecepatan, dan nama santri yang cocok. Kalau tidak ada hasil setelah scan, scanner belum mengirim Enter.</small><input id="ct" class="big" inputmode="none" autocomplete="off" placeholder="Scan kartu di sini…"><div id="ctOut"></div></div>';
+  $('#ckGo').onclick=jalankanCek;
+  $('#ckCp').onclick=()=>{const t=cekLap.map(x=>({ok:'[OK] ',warn:'[CEK] ',bad:'[GAGAL] '}[x.st])+x.k+': '+x.d).join('\n');try{navigator.clipboard.writeText(t);$('#ckSum').textContent='Laporan disalin'}catch(e){prompt('Salin laporan:',t)}};
+  scannerTes();jalankanCek()}
+function scannerTes(){const t=$('#ct');let ts=[],tm=null;const out=(c,x)=>'<div class="lg '+c+'">'+x+'</div>';
+  t.oninput=()=>{clearTimeout(tm);tm=setTimeout(()=>{if(t.value){$('#ctOut').innerHTML=out('yl','⚠️ Ada karakter masuk ('+esc(t.value)+') tetapi <b>tidak ada Enter</b> — scan kode "Add CR/Enter" di buku panduan scanner');t.value=''}},1500)};
+  t.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();clearTimeout(tm);const k=t.value.trim(),d=ts.length>1?(ts[ts.length-1]-ts[0])/(ts.length-1):0,n=parseInt(k,10),r=D&&!isNaN(n)?rows().find(x=>Number(x.no)===n):null;ts=[];t.value='';
+      $('#ctOut').innerHTML=out('gr','✅ Enter diterima')+out(/^\d{3}$/.test(k)?'gr':'yl',(/^\d{3}$/.test(k)?'✅':'⚠️')+' Isi: "'+esc(k)+'" ('+k.length+' karakter'+(/^\d{3}$/.test(k)?'':', seharusnya 3 digit')+')')+out(!d||d<60?'gr':'yl',(!d||d<60?'✅':'⚠️')+' Kecepatan: '+(d?Math.round(d)+' ms/karakter':'-')+(!d||d<60?'':' (lambat — diketik manual atau scanner bermasalah)'))+(r?out('gr','✅ Kartu '+esc(k)+' = <b>'+esc(r.nama)+'</b> ('+esc(r.kelas)+')'):out('rd','❌ Nomor '+esc(k)+' tidak ada di data santri'))}
+    else if(e.key.length===1)ts.push(performance.now())}}
+async function cekFB(add){
+  if(!FIREBASE.databaseURL){add('Firebase','warn','databaseURL kosong — hanya polling (lebih lambat)');return}
+  for(let i=0;i<40&&!(DB&&fbOn);i++)await zz(250);
+  if(!(DB&&fbOn)){add('Firebase tersambung','bad','tidak tersambung dalam 10 detik — cek konfigurasi dan koneksi');return}
+  add('Firebase tersambung','ok','terhubung');
+  const id='cek'+Math.random().toString(36).slice(2,6);let t0=0,got=0;
+  const ref=DB.ref('ev').orderByChild('ts').startAt(Date.now()+OFF-2000),cb=s=>{const e=s.val();if(e&&e.src===id&&!got)got=Date.now()-t0};ref.on('child_added',cb);
+  t0=Date.now();const r=DB.ref('ev').push();
+  try{await r.set({a:'cek',rows:[0],jam:'',src:id,ts:firebase.database.ServerValue.TIMESTAMP});add('Firebase tulis','ok','selesai '+(Date.now()-t0)+' ms')}catch(e){add('Firebase tulis','bad','ditolak: '+e.message+' — tempel firebase-rules.json lalu Publish')}
+  for(let i=0;i<20&&!got;i++)await zz(100);ref.off('child_added',cb);setTimeout(()=>{try{r.remove()}catch(e){}},1000);
+  add('Firebase sinyal masuk',got?(got<800?'ok':'warn'):'bad',got?got+' ms (dari tulis sampai diterima)':'sinyal tidak diterima dalam 2 detik');
+  try{await DB.ref('cek_tes').set(1);try{DB.ref('cek_tes').remove()}catch(e){}add('Aturan keamanan Firebase','bad','path selain "ev" TERBUKA — tempel firebase-rules.json di tab Rules lalu Publish')}catch(e){add('Aturan keamanan Firebase','ok','path selain "ev" terkunci')}}
+async function jalankanCek(){
+  cekLap=[];const add=(k,st,d)=>{cekLap.push({k:k,st:st,d:d});tampilCek()};$('#ckSum').textContent='Memeriksa…';tampilCek();
+  const lat=[];let skew=0;
+  for(let i=0;i<5;i++){const a=Date.now();try{const r=await q({action:'dyn',sejak:ver});const b=Date.now();lat.push(b-a);if(r.ts)skew=r.ts-(a+b)/2}catch(e){}}
+  if(!lat.length)add('Server Apps Script','bad','tidak bisa dihubungi — cek URL API dan deploy versi terbaru');
+  else{const avg=Math.round(lat.reduce((m,x)=>m+x,0)/lat.length),mx=Math.max(...lat);
+    add('Kecepatan server (baca)',avg<1500?'ok':avg<4000?'warn':'bad','rata-rata '+avg+' ms, terlambat '+mx+' ms ('+lat.length+' percobaan)');
+    add('Jam perangkat vs server',Math.abs(skew)<3000?'ok':'warn','selisih '+(Math.round(skew/100)/10)+' detik'+(Math.abs(skew)<3000?'':' — jam tercatat memakai jam server, tetapi perbaiki jam perangkat'))}
+  try{const r=await q({action:'cek'});if(r.status==='OK')r.cek.forEach(x=>add(x.k,x.st,x.d));else add('Pemeriksaan server','bad',r.status==='BUKAN_ADMIN'?'perlu PIN admin':'balasan: '+r.status)}catch(e){add('Pemeriksaan server','bad','gagal: '+e.message)}
+  await cekFB(add);
+  try{localStorage.setItem('cek','1');localStorage.removeItem('cek');add('Penyimpanan browser','ok','berfungsi (antrean offline tersimpan)')}catch(e){add('Penyimpanan browser','bad','tidak bisa dipakai (mode privat?) — antrean offline tidak tersimpan')}
+  add('Suara',(window.AudioContext||window.webkitAudioContext)?'ok':'warn',(window.AudioContext||window.webkitAudioContext)?'didukung (tap layar sekali agar aktif)':'tidak didukung browser ini');
+  for(const x of [['Video latar',VIDEO_FILE,10e6],['Foto latar',LATAR_FOTO,3e6]]){if(!x[1])continue;try{const r=await fetch(x[1],{method:'HEAD'}),len=+r.headers.get('content-length')||0;add(x[0]+' ('+x[1]+')',r.ok?(len>x[2]?'warn':'ok'):'bad',r.ok?(len?(Math.round(len/1048576*10)/10)+' MB'+(len>x[2]?' — terlalu besar, kompres':''):'ada'):'tidak ditemukan di repo (HTTP '+r.status+')')}catch(e){add(x[0],'warn','tidak bisa dicek')}}
+  tampilCek(true)}
 D&&PIN?mulai():login();
 </script></body></html>
